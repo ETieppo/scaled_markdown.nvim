@@ -1,9 +1,27 @@
-local RendererEnum = {
-  GRAPHICS = 'graphics',
-  TYPEFACE = 'typeface',
-  TOILET = 'toilet',
-  FIGLET = 'figlet',
-  PLAIN = 'plain',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local RENDERER_ENUM = {
+   GRAPHICS = 'graphics',
+   TYPEFACE = 'typeface',
+   TOILET = 'toilet',
+   FIGLET = 'figlet',
+   PLAIN = 'plain',
 }
 
-return RendererEnum
+return RENDERER_ENUM

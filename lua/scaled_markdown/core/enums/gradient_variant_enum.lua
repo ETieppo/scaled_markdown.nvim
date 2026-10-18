@@ -1,6 +1,18 @@
-local GradientVariantEnum = {
-  FOREGROUND = 'foreground',
-  FILL = 'fill',
+
+
+
+
+
+
+
+
+
+
+
+
+local GRADIENT_VARIANT_ENUM = {
+   FOREGROUND = 'foreground',
+   FILL = 'fill',
 }
 
-return GradientVariantEnum
+return GRADIENT_VARIANT_ENUM

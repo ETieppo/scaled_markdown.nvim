@@ -1,6 +1,18 @@
-local LanguageEnum = {
-  MARKDOWN = 'markdown',
-  MARKDOWN_INLINE = 'markdown_inline',
+
+
+
+
+
+
+
+
+
+
+
+
+local LANGUAGE_ENUM = {
+   MARKDOWN = 'markdown',
+   MARKDOWN_INLINE = 'markdown_inline',
 }
 
-return LanguageEnum
+return LANGUAGE_ENUM
