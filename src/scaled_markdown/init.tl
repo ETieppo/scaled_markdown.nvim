@@ -17,7 +17,7 @@ local MOD_PROPS_LIST <const>: {ModProps} = {
   --require 'scaled_markdown.mods.link',
   --require 'scaled_markdown.mods.link_reference',
   --require 'scaled_markdown.mods.image',
-  --require 'scaled_markdown.mods.list',
+  require 'scaled_markdown.mods.list',
   --require 'scaled_markdown.mods.checkbox',
   --require 'scaled_markdown.mods.quote',
   require 'scaled_markdown.mods.code_block',
