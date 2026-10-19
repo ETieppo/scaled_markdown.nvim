@@ -1,5 +1,5 @@
 local CHECKBOX_CAPTURE_ENUM =
-require('scaled_markdown.mods.checkbox.checkbox_capture_enum')
+  require 'scaled_markdown.mods.checkbox.checkbox_capture_enum'
 
 local CHECKBOX_QUERY = ([[
 (task_list_marker_unchecked) @%s

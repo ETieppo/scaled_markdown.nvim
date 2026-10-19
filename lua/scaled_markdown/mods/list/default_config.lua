@@ -1,7 +1,6 @@
-
-
+---@type ListConfigProps
 local DEFAULT_LIST_CONFIG = {
-   bullets = { '●', '○', '◆', '◇' },
+  bullets = { '●', '○', '◆', '◇' },
 }
 
 return DEFAULT_LIST_CONFIG

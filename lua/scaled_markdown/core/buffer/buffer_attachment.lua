@@ -1,109 +1,123 @@
-local CORE_CONSTANTS = require('scaled_markdown.core.constants')
+local CORE_CONSTANTS = require 'scaled_markdown.core.constants'
 local buffer_state_store =
-require('scaled_markdown.core.buffer.buffer_state_store')
-local config_store = require('scaled_markdown.core.config.config_store')
-local render_pipeline = require('scaled_markdown.core.render.render_pipeline')
-local render_scheduler = require('scaled_markdown.core.autocmd.render_scheduler')
+  require 'scaled_markdown.core.buffer.buffer_state_store'
+local config_store = require 'scaled_markdown.core.config.config_store'
+local render_pipeline = require 'scaled_markdown.core.render.render_pipeline'
+local render_scheduler = require 'scaled_markdown.core.autocmd.render_scheduler'
 local window_option_guard =
-require('scaled_markdown.core.window.window_option_guard')
+  require 'scaled_markdown.core.window.window_option_guard'
 
+---@type string[]
 local RENDER_TRIGGER_EVENTS = {
-   'TextChanged',
-   'TextChangedI',
-   'InsertLeave',
-   'CursorMoved',
-   'CursorMovedI',
-   'ModeChanged',
-   'WinScrolled',
-   'WinResized',
-   'BufWinEnter',
+  'TextChanged',
+  'TextChangedI',
+  'InsertLeave',
+  'CursorMoved',
+  'CursorMovedI',
+  'ModeChanged',
+  'WinScrolled',
+  'WinResized',
+  'BufWinEnter',
 }
 
+---@class buffer_attachment
+---@field detach fun(buf?: integer)
 local buffer_attachment = {}
 
-
-
+---@param buf? integer
+---@return integer
 local function resolve_buffer(buf)
-   return (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+  if buf == nil or buf == 0 then return vim.api.nvim_get_current_buf() end
+  return buf
 end
 
+---@param buf integer
+---@return string
 local function build_augroup_name(buf)
-   return CORE_CONSTANTS.BUFFER_AUGROUP_PREFIX .. buf
+  return CORE_CONSTANTS.BUFFER_AUGROUP_PREFIX .. buf
 end
 
+---@param buf integer
 local function apply_window_options(buf)
-   for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-      window_option_guard.apply(win, config_store.get().window_options)
-   end
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    window_option_guard.apply(win, config_store.get().window_options)
+  end
 end
 
+---@param buf integer
 local function restore_window_options(buf)
-   for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-      window_option_guard.restore(win)
-   end
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    window_option_guard.restore(win)
+  end
 end
 
+---@param buf integer
 local function register_buffer_autocmds(buf)
-   local augroup_id =
-   vim.api.nvim_create_augroup(build_augroup_name(buf), { clear = true })
-   vim.api.nvim_create_autocmd(RENDER_TRIGGER_EVENTS, {
-      group = augroup_id,
-      buffer = buf,
-      callback = function(event)
-         if event.event == 'BufWinEnter' then apply_window_options(buf) end
-         render_scheduler.schedule(buf)
-      end,
-   })
-   vim.api.nvim_create_autocmd({ 'BufWipeout', 'BufUnload' }, {
-      group = augroup_id,
-      buffer = buf,
-      callback = function() buffer_attachment.detach(buf) end,
-   })
+  local augroup_id =
+    vim.api.nvim_create_augroup(build_augroup_name(buf), { clear = true })
+  vim.api.nvim_create_autocmd(RENDER_TRIGGER_EVENTS, {
+    group = augroup_id,
+    buffer = buf,
+    callback = function(event)
+      if event.event == 'BufWinEnter' then apply_window_options(buf) end
+      render_scheduler.schedule(buf)
+    end,
+  })
+  vim.api.nvim_create_autocmd({ 'BufWipeout', 'BufUnload' }, {
+    group = augroup_id,
+    buffer = buf,
+    callback = function() buffer_attachment.detach(buf) end,
+  })
 end
 
+---@param buf? integer
 function buffer_attachment.attach(buf)
-   buf = resolve_buffer(buf)
-   if not vim.api.nvim_buf_is_valid(buf) then return end
+  buf = resolve_buffer(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
 
-   buffer_state_store.mark_attached(buf)
-   register_buffer_autocmds(buf)
-   apply_window_options(buf)
-   render_pipeline.render(buf)
+  buffer_state_store.mark_attached(buf)
+  register_buffer_autocmds(buf)
+  apply_window_options(buf)
+  render_pipeline.render(buf)
 end
 
+---@param buf? integer
 function buffer_attachment.detach(buf)
-   buf = resolve_buffer(buf)
-   buffer_state_store.mark_detached(buf)
-   render_scheduler.cancel(buf)
+  buf = resolve_buffer(buf)
+  buffer_state_store.mark_detached(buf)
+  render_scheduler.cancel(buf)
 
-   pcall(vim.api.nvim_del_augroup_by_name, build_augroup_name(buf))
-   restore_window_options(buf)
-   render_pipeline.clear(buf)
+  pcall(vim.api.nvim_del_augroup_by_name, build_augroup_name(buf))
+  restore_window_options(buf)
+  render_pipeline.clear(buf)
 end
 
+---@param buf? integer
 function buffer_attachment.toggle(buf)
-   buf = resolve_buffer(buf)
-   if buffer_state_store.is_attached(buf) then
-      buffer_attachment.detach(buf)
-   else
-      buffer_attachment.attach(buf)
-   end
+  buf = resolve_buffer(buf)
+  if buffer_state_store.is_attached(buf) then
+    buffer_attachment.detach(buf)
+  else
+    buffer_attachment.attach(buf)
+  end
 end
 
 function buffer_attachment.refresh_all()
-   for _, buf in ipairs(buffer_state_store.list_attached()) do
-      render_pipeline.render(buf)
-   end
+  for _, buf in ipairs(buffer_state_store.list_attached()) do
+    render_pipeline.render(buf)
+  end
 end
 
 function buffer_attachment.schedule_refresh_all()
-   for _, buf in ipairs(buffer_state_store.list_attached()) do
-      render_scheduler.schedule(buf)
-   end
+  for _, buf in ipairs(buffer_state_store.list_attached()) do
+    render_scheduler.schedule(buf)
+  end
 end
 
+---@param buf? integer
+---@return boolean
 function buffer_attachment.is_attached(buf)
-   return buffer_state_store.is_attached(resolve_buffer(buf))
+  return buffer_state_store.is_attached(resolve_buffer(buf))
 end
 
 return buffer_attachment

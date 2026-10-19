@@ -1,23 +1,29 @@
-CYAN ?= cyan
-export CYAN
-
-SRC_FILES := $(shell find src -name '*.tl')
-TEST_FILES := $(shell cd tests && find . -name '*.tl' -not -path './build/*')
+LUA_LANGUAGE_SERVER ?= lua-language-server
+STYLUA ?= stylua
+VIMRUNTIME ?= $(shell nvim --clean --headless -c 'lua io.write(vim.env.VIMRUNTIME)' -c q 2>&1)
+export VIMRUNTIME
 
 .NOTPARALLEL:
-.PHONY: all test check build
+.PHONY: all test check lint format-check format
 
-all: build
+all: check test
 
 test:
 	@echo '==> test'
 	@sh tests/run.sh
 
-check:
-	@echo '==> check'
-	@$(CYAN) check -q $(SRC_FILES)
-	@cd tests && $(CYAN) check -q $(TEST_FILES)
+lint:
+	@echo '==> lint'
+	@log_path=$$(mktemp -d) && \
+		$(LUA_LANGUAGE_SERVER) --check . --checklevel=Information \
+			--check_format=pretty --logpath "$$log_path"; \
+		status=$$?; rm -rf "$$log_path"; exit $$status
 
-build: test check
-	@echo '==> build'
-	@$(CYAN) build -q
+format-check:
+	@echo '==> format-check'
+	@$(STYLUA) --check lua tests
+
+check: lint format-check
+
+format:
+	@$(STYLUA) lua tests

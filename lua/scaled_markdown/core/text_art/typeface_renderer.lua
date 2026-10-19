@@ -1,139 +1,105 @@
-
-
-
-
-
-
-local CORE_CONSTANTS = require('scaled_markdown.core.constants')
+local SYMBOL_CELL_GEOMETRY =
+  require 'scaled_markdown.core.symbolize.symbol_cell_geometry'
 local art_lines_parser =
-require('scaled_markdown.core.text_art.art_lines_parser')
-local font_resolver = require('scaled_markdown.core.text_art.font_resolver')
+  require 'scaled_markdown.core.text_art.art_lines_parser'
+local font_face_loader = require 'scaled_markdown.core.font.font_face_loader'
+local font_resolver = require 'scaled_markdown.core.text_art.font_resolver'
+local glyph_run_rasterizer =
+  require 'scaled_markdown.core.raster.glyph_run_rasterizer'
+local ink_bounds = require 'scaled_markdown.core.raster.ink_bounds'
+local symbol_art_builder =
+  require 'scaled_markdown.core.symbolize.symbol_art_builder'
+local symbol_catalog = require 'scaled_markdown.core.symbolize.symbol_catalog'
+local symbol_grid_fitter =
+  require 'scaled_markdown.core.symbolize.symbol_grid_fitter'
+local text_line_layout = require 'scaled_markdown.core.layout.text_line_layout'
 local typeface_glyph_box =
-require('scaled_markdown.core.text_art.typeface_glyph_box')
-local process_runner = require('scaled_markdown.core.text_art.process_runner')
+  require 'scaled_markdown.core.text_art.typeface_glyph_box'
 
-local MAGICK_EXECUTABLE = 'magick'
-local CHAFA_EXECUTABLE = 'chafa'
-local RENDER_POINT_SIZE = 160
-local HORIZONTAL_MARGIN = '4x0'
-local CANVAS_COLOR = 'black'
-local GLYPH_COLOR = 'white'
-local CHAFA_WORK_FACTOR = 9
-local GLYPH_BOX_CROP_FORMAT = '%dx%d+0+%d'
-local UNBOUNDED_CROP_WIDTH = 100000
+local HORIZONTAL_MARGIN_EM = 0.025
 
+---@class typeface_renderer: TextArtRendererProps
 local typeface_renderer = {}
 
-
-local function escape_label_text(text)
-   return (text:gsub('\\', '\\\\'):gsub('%%', '%%%%'))
+---@param glyph_box GlyphBoxProps
+---@param bounds InkBoundsProps
+---@param margin number
+---@param image_width number
+---@param grid SymbolGridProps
+---@return RasterTransformProps
+local function build_transform(glyph_box, bounds, margin, image_width, grid)
+  local scale_x = grid.columns
+    * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS
+    / image_width
+  local scale_y = grid.rows
+    * SYMBOL_CELL_GEOMETRY.SUBCELL_ROWS
+    / glyph_box.height
+  return {
+    scale_x = scale_x,
+    scale_y = scale_y,
+    origin_x = (margin - bounds.min_x) * scale_x,
+    origin_y = glyph_box.top * scale_y,
+  }
 end
 
-local function build_rasterize_command(
-   font_file,
-   glyph_box)
-
-   return {
-      MAGICK_EXECUTABLE,
-      '-background',
-      CANVAS_COLOR,
-      '-fill',
-      GLYPH_COLOR,
-      '-font',
-      font_file,
-      '-pointsize',
-      tostring(RENDER_POINT_SIZE),
-      'label:@-',
-      '-crop',
-      GLYPH_BOX_CROP_FORMAT:format(
-      UNBOUNDED_CROP_WIDTH,
-      glyph_box.height,
-      glyph_box.top),
-
-      '+repage',
-      '-define',
-      'trim:edges=east,west',
-      '-trim',
-      '+repage',
-      '-bordercolor',
-      CANVAS_COLOR,
-      '-border',
-      HORIZONTAL_MARGIN,
-      'png:-',
-   }
+---@param face FontFaceProps
+---@param text string
+---@param style_props TextArtStyleProps
+---@param width integer
+---@return TextArtProps?
+local function render_with_face(face, text, style_props, width)
+  local glyph_box = typeface_glyph_box.resolve(face)
+  if not glyph_box then return nil end
+  local placements = text_line_layout.layout(face, text).placements
+  local bounds = ink_bounds.measure(face, placements)
+  if not bounds then return nil end
+  local margin = face.units_per_em * HORIZONTAL_MARGIN_EM
+  local image_width = bounds.max_x - bounds.min_x + 2 * margin
+  local grid = symbol_grid_fitter.fit(
+    image_width,
+    glyph_box.height,
+    style_props.rows,
+    width
+  )
+  local bitmap = glyph_run_rasterizer.rasterize(
+    face,
+    placements,
+    build_transform(glyph_box, bounds, margin, image_width, grid),
+    grid.columns * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS,
+    grid.rows * SYMBOL_CELL_GEOMETRY.SUBCELL_ROWS
+  )
+  return art_lines_parser.to_result(
+    symbol_art_builder.build(
+      bitmap,
+      grid,
+      symbol_catalog.resolve(style_props.symbols)
+    )
+  )
 end
 
-local function build_symbolize_command(
-   style_props,
-   width)
-
-   return {
-      CHAFA_EXECUTABLE,
-      '--format',
-      'symbols',
-      '--symbols',
-      style_props.symbols,
-      '--colors',
-      'none',
-      '--polite',
-      'on',
-      '--dither',
-      'none',
-      '--work',
-      tostring(CHAFA_WORK_FACTOR),
-      '--size',
-      ('%dx%d'):format(width, style_props.rows),
-      '-',
-   }
+---@param text string
+---@param style_props TextArtStyleProps
+---@param width integer
+---@return TextArtProps?
+local function render(text, style_props, width)
+  local font_file = font_resolver.resolve(style_props.font)
+  local face = font_file and font_face_loader.load(font_file)
+  if not face then return nil end
+  return render_with_face(face, text, style_props, width)
 end
 
-function typeface_renderer.is_available()
-   return vim.fn.executable(MAGICK_EXECUTABLE) == 1 and
-   vim.fn.executable(CHAFA_EXECUTABLE) == 1 and
-   font_resolver.is_available()
-end
+---@return boolean
+function typeface_renderer.is_available() return font_resolver.is_available() end
 
-function typeface_renderer.render_async(
-   text,
-   style_props,
-   width,
-   on_done)
-
-   local font_file = font_resolver.resolve(style_props.font)
-   local glyph_box = font_file and
-   typeface_glyph_box.resolve(font_file, RENDER_POINT_SIZE)
-   if not glyph_box then
-      on_done(nil)
-      return
-   end
-   local process_options = {
-      stdin = escape_label_text(text),
-      timeout = CORE_CONSTANTS.TEXT_ART_TIMEOUT_MS,
-   }
-   process_runner.run_async(
-   build_rasterize_command(font_file, glyph_box),
-   process_options,
-   function(rasterize_result)
-      if rasterize_result.code ~= 0 or not rasterize_result.stdout then
-         on_done(nil)
-         return
-      end
-      process_runner.run_async(build_symbolize_command(style_props, width), {
-         stdin = rasterize_result.stdout,
-         text = true,
-         timeout = CORE_CONSTANTS.TEXT_ART_TIMEOUT_MS,
-      }, function(symbolize_result)
-         local is_success = symbolize_result.code == 0
-         on_done(
-         is_success and
-         art_lines_parser.to_result(
-         art_lines_parser.split_lines(symbolize_result.stdout)) or
-
-         nil)
-
-      end)
-   end)
-
+---@param text string
+---@param style_props TextArtStyleProps
+---@param width integer
+---@param on_done fun(art: TextArtProps?)
+function typeface_renderer.render_async(text, style_props, width, on_done)
+  vim.schedule(function()
+    local ok, art = pcall(render, text, style_props, width)
+    on_done(ok and art or nil)
+  end)
 end
 
 return typeface_renderer

@@ -1,0 +1,11 @@
+---@meta
+
+---@class FontFaceProps
+---@field units_per_em number
+---@field ascender number
+---@field descender number
+---@field line_gap number
+---@field find_glyph_index fun(codepoint: integer): integer
+---@field advance_width fun(glyph_index: integer): number
+---@field kerning fun(left_glyph_index: integer, right_glyph_index: integer): number
+---@field load_outline fun(glyph_index: integer): GlyphOutlineProps

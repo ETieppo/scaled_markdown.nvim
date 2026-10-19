@@ -1,7 +1,6 @@
-
-
+---@type ImageConfigProps
 local DEFAULT_IMAGE_CONFIG = {
-   icon = '▣ ',
+  icon = '▣ ',
 }
 
 return DEFAULT_IMAGE_CONFIG
