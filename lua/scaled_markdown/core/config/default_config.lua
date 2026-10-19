@@ -19,6 +19,7 @@ local DEFAULT_CONFIG = {
   terminal = {
     fallback_cell_width_pixels = 10,
     fallback_cell_height_pixels = 22,
+    allow_tmux_passthrough = true,
   },
   mods = {},
 }

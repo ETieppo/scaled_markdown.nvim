@@ -4,6 +4,7 @@ local text_art_service =
 local buffer_attachment =
   require 'scaled_markdown.core.buffer.buffer_attachment'
 local config_store = require 'scaled_markdown.core.config.config_store'
+local tmux_client = require 'scaled_markdown.core.terminal.tmux_client'
 
 ---@type table<string, SubcommandHandlerProps>
 local subcommand_handlers = {}
@@ -22,6 +23,7 @@ subcommand_handlers.toggle = {
 
 subcommand_handlers.refresh = {
   run = function()
+    tmux_client.reset()
     text_art_service.clear_cache()
     buffer_attachment.refresh_all()
   end,

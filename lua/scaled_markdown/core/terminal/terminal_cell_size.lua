@@ -1,5 +1,6 @@
 local ffi = require 'ffi'
 local config_store = require 'scaled_markdown.core.config.config_store'
+local tmux_client = require 'scaled_markdown.core.terminal.tmux_client'
 
 local TIOCGWINSZ = 0x5413
 local TTY_DEVICE_PATH = '/dev/tty'
@@ -87,13 +88,24 @@ local function read_from_tty_device()
 end
 
 ---@return CellSizeProps?
+local function read_from_tmux_client()
+  local client_props = tmux_client.probe()
+  if not client_props or not client_props.cell_width then return nil end
+  if not client_props.cell_height then return nil end
+  return { width = client_props.cell_width, height = client_props.cell_height }
+end
+
+---@return CellSizeProps?
 local function read_from_terminal()
-  if not are_bindings_ready then return nil end
-  local cell_size = read_from_tty_device()
-  for _, file_descriptor in ipairs(STANDARD_FILE_DESCRIPTORS) do
-    cell_size = cell_size or read_window_size(file_descriptor)
+  ---@type CellSizeProps?
+  local cell_size = nil
+  if are_bindings_ready then
+    cell_size = read_from_tty_device()
+    for _, file_descriptor in ipairs(STANDARD_FILE_DESCRIPTORS) do
+      cell_size = cell_size or read_window_size(file_descriptor)
+    end
   end
-  return cell_size
+  return cell_size or read_from_tmux_client()
 end
 
 ---@return CellSizeProps?

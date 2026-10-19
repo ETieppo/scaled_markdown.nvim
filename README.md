@@ -21,13 +21,26 @@ Most markdown plugins can only change colors and add icons, because a terminal c
 
 | Renderer   | How it draws headings                                               | Requirements                                              |
 | ---------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
-| `graphics` | Real anti-aliased images through Kitty graphics placeholders        | Kitty, Ghostty or WezTerm, `termguicolors`, not in tmux   |
+| `graphics` | Real anti-aliased images through Kitty graphics placeholders        | Kitty, Ghostty or WezTerm, `termguicolors` (tmux works too) |
 | `typeface` | Glyphs rasterized from a system font into octant/block characters   | An installed TrueType/OpenType font                       |
 | `toilet`   | Text art from `toilet` fonts                                        | The `toilet` binary                                       |
 | `figlet`   | Text art from `figlet` fonts                                        | The `figlet` binary                                       |
 | `plain`    | No scaling, only styling                                            | Nothing                                                   |
 
 If the configured renderer is not available, the plugin tries the others in this order: `graphics` → `typeface` → `toilet` → `figlet`.
+
+### Inside tmux
+
+The `graphics` renderer also works inside tmux (3.3 or newer). Images are sent straight through the terminal connection, with no temporary files, so they work over SSH too. The plugin:
+
+- reads the outer terminal, its true color support and its cell size from the tmux client
+- sets `allow-passthrough` to `all` (or `on` on tmux versions without `all`) on its own pane only, never globally, and puts the old value back when Neovim exits (turn this off with `terminal.allow_tmux_passthrough = false`)
+
+The tmux client needs the `RGB` feature, because the image id travels in the text color. Most setups already have it. If `:checkhealth scaled_markdown` says it is missing, add this to `tmux.conf`:
+
+```tmux
+set -as terminal-features ',xterm*:RGB'
+```
 
 ## Requirements
 
@@ -82,6 +95,7 @@ require('scaled_markdown').setup({
   terminal = {
     fallback_cell_width_pixels = 10,
     fallback_cell_height_pixels = 22,
+    allow_tmux_passthrough = true,
   },
   mods = {},
 })
@@ -92,6 +106,7 @@ Optional keys:
 - `gradient.colors`: one hex color or a list of them, such as `{ '#89b4fa', '#cba6f7' }`. When it is not set, the colors come from your colorscheme.
 - `gradient.fill_foreground`: text color for headings drawn on a gradient fill.
 - `terminal.cell_width_pixels` / `terminal.cell_height_pixels`: set the cell size by hand when it cannot be measured.
+- `terminal.allow_tmux_passthrough`: lets the plugin turn on `allow-passthrough` for its own tmux pane. With `false`, graphics inside tmux need you to set it yourself.
 
 ### Mods
 

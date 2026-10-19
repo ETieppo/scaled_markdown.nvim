@@ -55,10 +55,16 @@ local function report_renderers()
 end
 
 local function report_terminal()
-  if terminal_capability.supports_kitty_graphics() then
+  local capability = terminal_capability.detect()
+  if capability.is_inside_tmux then
+    vim.health.info 'running inside tmux: graphics use passthrough'
+  end
+  if capability.supports_kitty_graphics then
     vim.health.ok 'terminal supports kitty graphics placeholders'
   else
-    vim.health.warn 'kitty graphics unavailable: needs ghostty/kitty/wezterm, termguicolors and no tmux'
+    vim.health.warn(
+      ('kitty graphics unavailable: %s'):format(capability.unsupported_reason)
+    )
   end
   local measured_size = terminal_cell_size.measure()
   local resolved_size = terminal_cell_size.resolve()

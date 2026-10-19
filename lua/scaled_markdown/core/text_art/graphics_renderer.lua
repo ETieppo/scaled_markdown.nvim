@@ -20,8 +20,6 @@ local text_line_layout = require 'scaled_markdown.core.layout.text_line_layout'
 local text_word_wrapper =
   require 'scaled_markdown.core.layout.text_word_wrapper'
 
-local IMAGE_FILE_SUFFIX = '-tty-graphics-protocol.rgba'
-local WRITE_BINARY_MODE = 'wb'
 local LINE_HEIGHT_TO_POINT_SIZE = 0.82
 local LINE_SPACING_PIXELS = 1
 local CANVAS_PADDING_PIXELS = 2
@@ -29,7 +27,8 @@ local NO_INK_WIDTH = 0
 local MIN_VISIBLE_COVERAGE = 0.5 / 255
 
 ---@class GraphicsImageProps
----@field path string
+---@field bitmap CoverageBitmapProps
+---@field ink_width integer
 ---@field width integer
 ---@field height integer
 
@@ -91,33 +90,6 @@ local function rasterize_lines(face, lines, scale)
   return coverage_rasterizer.to_bitmap(canvas)
 end
 
----@param bitmap CoverageBitmapProps
----@param ink_width integer
----@param style_props TextArtStyleProps
----@param cell_size CellSizeProps
----@return GraphicsImageProps?
-local function write_image(bitmap, ink_width, style_props, cell_size)
-  ---@type GraphicsImageProps
-  local image = {
-    path = vim.fn.tempname() .. IMAGE_FILE_SUFFIX,
-    width = round_up_to_multiple(ink_width, cell_size.width),
-    height = round_up_to_multiple(bitmap.height, cell_size.height),
-  }
-  local file = io.open(image.path, WRITE_BINARY_MODE)
-  if not file then return nil end
-  file:write(
-    graphics_pixel_encoder.encode_rgba(
-      bitmap,
-      ink_width,
-      image.width,
-      image.height,
-      style_props.gradient_colors
-    )
-  )
-  file:close()
-  return image
-end
-
 ---@param text string
 ---@param style_props TextArtStyleProps
 ---@param width integer
@@ -137,23 +109,32 @@ local function render_image(text, style_props, width, cell_size)
   local bitmap = rasterize_lines(face, lines, scale)
   local ink_width = measure_ink_width(bitmap)
   if ink_width == NO_INK_WIDTH then return nil end
-  return write_image(bitmap, ink_width, style_props, cell_size)
+  return {
+    bitmap = bitmap,
+    ink_width = ink_width,
+    width = round_up_to_multiple(ink_width, cell_size.width),
+    height = round_up_to_multiple(bitmap.height, cell_size.height),
+  }
 end
 
 ---@param image GraphicsImageProps
+---@param style_props TextArtStyleProps
 ---@param cell_size CellSizeProps
 ---@return TextArtProps?
-local function place_image(image, cell_size)
+local function place_image(image, style_props, cell_size)
   local columns = math.ceil(image.width / cell_size.width)
   local rows = math.ceil(image.height / cell_size.height)
-  if rows > graphics_placeholder_builder.max_rows() then
-    os.remove(image.path)
-    return nil
-  end
+  if rows > graphics_placeholder_builder.max_rows() then return nil end
   local image_id, highlight_group = graphics_image_registry.allocate()
-  kitty_graphics_protocol.transmit_temporary_file(
+  kitty_graphics_protocol.transmit_pixels(
     image_id,
-    image.path,
+    graphics_pixel_encoder.encode_rgba(
+      image.bitmap,
+      image.ink_width,
+      image.width,
+      image.height,
+      style_props.gradient_colors
+    ),
     image.width,
     image.height,
     columns,
@@ -172,7 +153,7 @@ end
 local function render(text, style_props, width)
   local cell_size = terminal_cell_size.resolve()
   local image = render_image(text, style_props, width, cell_size)
-  return image and place_image(image, cell_size)
+  return image and place_image(image, style_props, cell_size)
 end
 
 ---@return boolean

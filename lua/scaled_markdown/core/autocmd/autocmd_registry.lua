@@ -16,7 +16,12 @@ end
 
 ---@param on_colorscheme_changed fun()
 ---@param on_exit fun()
-function autocmd_registry.register(on_colorscheme_changed, on_exit)
+---@param on_terminal_changed fun()
+function autocmd_registry.register(
+  on_colorscheme_changed,
+  on_exit,
+  on_terminal_changed
+)
   local augroup_id =
     vim.api.nvim_create_augroup(CORE_CONSTANTS.AUGROUP_NAME, { clear = true })
 
@@ -39,6 +44,11 @@ function autocmd_registry.register(on_colorscheme_changed, on_exit)
       on_colorscheme_changed()
       buffer_attachment.refresh_all()
     end,
+  })
+
+  vim.api.nvim_create_autocmd({ 'FocusGained', 'VimResume' }, {
+    group = augroup_id,
+    callback = on_terminal_changed,
   })
 
   vim.api.nvim_create_autocmd('VimLeavePre', {
