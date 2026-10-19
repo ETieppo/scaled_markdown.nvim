@@ -16,6 +16,9 @@ global record vim
   record HighlightInfoProps
     fg: integer
     bg: integer
+    bold: boolean
+    italic: boolean
+    strikethrough: boolean
   end
 
   record GetHighlightOptionsProps
@@ -90,6 +93,7 @@ global record vim
     stdin: string
     text: boolean
     timeout: integer
+    cwd: string
   end
 
   record SystemCompletedProps
@@ -122,7 +126,10 @@ global record vim
   end
 
   record LanguageTreeProps
-    parse: function(LanguageTreeProps, {integer, integer}): {TSTreeProps}
+    parse: function(
+      LanguageTreeProps,
+      ? {integer, integer} | boolean
+    ): {TSTreeProps}
     for_each_tree: function(
       LanguageTreeProps,
       function(TSTreeProps, LanguageTreeProps)
@@ -136,8 +143,8 @@ global record vim
       QueryProps,
       TSNodeProps,
       integer,
-      integer,
-      integer
+      ? integer,
+      ? integer
     ): function(): integer, TSNodeProps
   end
 
@@ -147,10 +154,44 @@ global record vim
 
   record BufferOptionsProps
     filetype: string
+    buftype: string
+    modified: boolean
   end
 
   record WindowOptionsProps
     conceallevel: integer
+    concealcursor: string
+    number: boolean
+    numberwidth: integer
+
+    metamethod __index: function(WindowOptionsProps, integer): WindowOptionsProps
+  end
+
+  record AutocmdQueryProps
+    group: string | integer
+    event: string
+  end
+
+  record ExecAutocmdsOptionsProps
+    buffer: integer
+  end
+
+  record BufferDeleteOptionsProps
+    force: boolean
+  end
+
+  record FindOptionsProps
+    path: string
+    type: string
+    limit: number
+  end
+
+  record DebugInfoProps
+    source: string
+  end
+
+  record CpuInfoProps
+    model: string
   end
 
   record GlobalOptionsProps
@@ -159,6 +200,12 @@ global record vim
 
   record api
     nvim_buf_clear_namespace: function(integer, integer, integer, integer)
+    nvim_buf_delete: function(integer, BufferDeleteOptionsProps)
+    nvim_buf_set_lines: function(integer, integer, integer, boolean, {string})
+    nvim_exec_autocmds: function(string, ExecAutocmdsOptionsProps)
+    nvim_get_autocmds: function(AutocmdQueryProps): {any}
+    nvim_get_commands: function({string: any}): {string: any}
+    nvim_win_set_width: function(integer, integer)
     nvim_buf_get_extmarks: function(
       integer,
       integer,
@@ -215,7 +262,10 @@ global record vim
 
   record fn
     bufwinid: function(integer): integer
+    delete: function(string, ? string): integer
     executable: function(string): integer
+    getcompletion: function(string, string): {string}
+    stdpath: function(string): string
     getpid: function(): integer
     getwininfo: function(integer): {WinInfoProps}
     line: function(string): integer
@@ -229,6 +279,22 @@ global record vim
   record uv
     new_timer: function(): TimerProps
     fs_stat: function(string): table
+    hrtime: function(): integer
+    cpu_info: function(): {CpuInfoProps}
+  end
+
+  record json
+    encode: function(any): string
+    decode: function(string): any
+  end
+
+  record fs
+    find: function(function(string): (boolean), FindOptionsProps): {string}
+  end
+
+  record v
+    progpath: string
+    argv: {string}
   end
 
   record treesitter
@@ -244,7 +310,7 @@ global record vim
     get_parser: function(
       integer,
       string,
-      GetParserOptionsProps
+      ? GetParserOptionsProps
     ): LanguageTreeProps
   end
 
@@ -272,6 +338,9 @@ global record vim
   record cmd
     metamethod __call: function(cmd, string)
     edit: function(string)
+    enew: function()
+    vsplit: function()
+    close: function()
   end
 
   bo: {integer: BufferOptionsProps}
@@ -281,6 +350,8 @@ global record vim
 
   deep_equal: function(any, any): boolean
   deepcopy: function<T>(T): T
+  endswith: function(string, string): boolean
+  inspect: function(any): string
   list_extend: function<T>({T}, {T}): {T}
   list_slice: function<T>({T}, ? integer, ? integer): {T}
   notify: function(string, ? integer)
@@ -297,6 +368,7 @@ global record vim
   tbl_extend: function<T>(string, T, T, ...: T): T
   tbl_filter: function<T>(function(T): (boolean), {T}): {T}
   tbl_keys: function<K, V>({K: V}): {K}
+  tbl_map: function<T, U>(function(T): (U), {T}): {U}
   tbl_values: function<K, V>({K: V}): {V}
   trim: function(string): string
   validate: function(
