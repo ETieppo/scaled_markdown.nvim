@@ -9,7 +9,6 @@ local plugin_setup = require('scaled_markdown.core.setup.plugin_setup')
 
 local scaled_markdown = {}
 
-
 local MOD_PROPS_LIST = {
    require('scaled_markdown.mods.heading'),
    require('scaled_markdown.mods.text'),
