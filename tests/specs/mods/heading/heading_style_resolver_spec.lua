@@ -8,6 +8,9 @@ local plugin_session = require 'helpers.plugin_session'
 local spec = require 'harness.spec'
 
 local UNCONFIGURED_LEVEL = 3
+---@type string[]
+local METALLIC_COLORS =
+  { '#6e4a0e', '#b8862b', '#f6dc8a', '#fff6d0', '#d4a13c' }
 ---@type table<RendererEnum, StyleProps>
 local STYLES = {
   [RENDERER_ENUM.GRAPHICS] = {
@@ -42,8 +45,7 @@ spec.describe('heading_style_resolver', function()
     expect.deep_equal(styles[RENDERER_ENUM.GRAPHICS], {
       font = 'Sans:bold',
       line_height_cells = 3,
-      start_color = gradient_palette.color_at(0),
-      end_color = gradient_palette.color_at(1),
+      gradient_colors = gradient_palette.colors(),
     }, 'graphics')
   end)
 
@@ -77,11 +79,31 @@ spec.describe('heading_style_resolver', function()
     expect.deep_equal(vim.tbl_keys(styles), { RENDERER_ENUM.TOILET }, 'toilet')
   end)
 
-  spec.it('produces only scalar fields so cache keys stay stable', function()
-    for _, style in pairs(heading_style_resolver.resolve(STYLES, 1)) do
-      for field_name, value in pairs(style) do
-        expect.not_equal(type(value), 'table', field_name .. ' is scalar')
+  spec.it('passes every gradient stop to the graphics style', function()
+    plugin_session.start { gradient = { colors = METALLIC_COLORS } }
+    expect.deep_equal(
+      heading_style_resolver.resolve(STYLES, 1)[RENDERER_ENUM.GRAPHICS].gradient_colors,
+      METALLIC_COLORS,
+      'all stops'
+    )
+  end)
+
+  spec.it(
+    'produces scalars or scalar lists so cache keys stay stable',
+    function()
+      for _, style in pairs(heading_style_resolver.resolve(STYLES, 1)) do
+        for field_name, value in pairs(style) do
+          if type(value) == 'table' then
+            for _, item in ipairs(value) do
+              expect.not_equal(
+                type(item),
+                'table',
+                field_name .. ' item is scalar'
+              )
+            end
+          end
+        end
       end
     end
-  end)
+  )
 end)

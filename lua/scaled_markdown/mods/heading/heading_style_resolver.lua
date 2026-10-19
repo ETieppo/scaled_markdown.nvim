@@ -2,9 +2,6 @@ local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 local gradient_palette =
   require 'scaled_markdown.core.highlight.gradient_palette'
 
-local GRADIENT_START_RATIO = 0
-local GRADIENT_END_RATIO = 1
-
 ---@alias StyleConfigProps StyleProps
 ---@alias StyleResolverProps fun(renderer_config: StyleConfigProps, level: integer): TextArtStyleProps
 
@@ -36,8 +33,7 @@ local function resolve_graphics_style(graphics_style_config, level)
   return {
     font = graphics_style_config.font,
     line_height_cells = line_height_cells,
-    start_color = gradient_palette.color_at(GRADIENT_START_RATIO),
-    end_color = gradient_palette.color_at(GRADIENT_END_RATIO),
+    gradient_colors = gradient_palette.colors(),
   }
 end
 

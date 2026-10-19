@@ -6,27 +6,16 @@ local TRANSPARENT_PIXEL = '\0\0\0\0'
 ---@class graphics_pixel_encoder
 local graphics_pixel_encoder = {}
 
----@param start_color string
----@param end_color string
+---@param gradient_colors string[]
 ---@param ink_width integer
 ---@return integer[][]
-local function build_column_colors(start_color, end_color, ink_width)
-  local start_rgb = color_math.hex_to_rgb(start_color)
-  local end_rgb = color_math.hex_to_rgb(end_color)
+local function build_column_colors(gradient_colors, ink_width)
   ---@type integer[][]
   local column_colors = {}
   for column = 1, ink_width do
     local ratio = ink_width > 1 and (column - 1) / (ink_width - 1) or 0
-    ---@type integer[]
-    local rgb = {}
-    for channel_index = 1, 3 do
-      rgb[channel_index] = math.floor(
-        start_rgb[channel_index]
-          + (end_rgb[channel_index] - start_rgb[channel_index]) * ratio
-          + 0.5
-      )
-    end
-    column_colors[column] = rgb
+    column_colors[column] =
+      color_math.hex_to_rgb(color_math.interpolate_hex(gradient_colors, ratio))
   end
   return column_colors
 end
@@ -35,18 +24,16 @@ end
 ---@param ink_width integer
 ---@param image_width integer
 ---@param image_height integer
----@param start_color string
----@param end_color string
+---@param gradient_colors string[]
 ---@return string
 function graphics_pixel_encoder.encode_rgba(
   bitmap,
   ink_width,
   image_width,
   image_height,
-  start_color,
-  end_color
+  gradient_colors
 )
-  local column_colors = build_column_colors(start_color, end_color, ink_width)
+  local column_colors = build_column_colors(gradient_colors, ink_width)
   local transparent_row = TRANSPARENT_PIXEL:rep(image_width)
   ---@type string[]
   local rows = {}

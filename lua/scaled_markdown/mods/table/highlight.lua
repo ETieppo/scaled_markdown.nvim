@@ -1,6 +1,7 @@
 ---@class TableHighlightGroupsProps
 ---@field HEADER_CELL string
 ---@field BODY_CELL string
+---@field INLINE_CODE string
 
 ---@class TableHighlightProps
 ---@field GROUPS TableHighlightGroupsProps
@@ -10,6 +11,7 @@
 local TABLE_HIGHLIGHT_GROUPS = {
   HEADER_CELL = 'ScaledMarkdownTableHeaderCell',
   BODY_CELL = 'ScaledMarkdownTableBodyCell',
+  INLINE_CODE = 'ScaledMarkdownTableInlineCode',
 }
 
 ---@type TableHighlightProps
@@ -18,6 +20,9 @@ local TABLE_HIGHLIGHT = {
   DEFINITIONS = {
     [TABLE_HIGHLIGHT_GROUPS.HEADER_CELL] = { link = '@markup.heading.markdown' },
     [TABLE_HIGHLIGHT_GROUPS.BODY_CELL] = { link = 'Normal' },
+    [TABLE_HIGHLIGHT_GROUPS.INLINE_CODE] = {
+      link = '@markup.raw.markdown_inline',
+    },
   },
 }
 

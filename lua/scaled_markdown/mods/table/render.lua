@@ -9,14 +9,18 @@ local table_dto_builder = require 'scaled_markdown.mods.table.table_dto_builder'
 local table_highlight = require 'scaled_markdown.mods.table.highlight'
 local utf8_text = require 'scaled_markdown.core.text.utf8_text'
 
----@alias PadFunctionProps fun(text: string, width: integer): string
+---@alias LeadingWidthFunctionProps fun(free_width: integer): integer
 
----@type table<AlignmentEnum, PadFunctionProps>
-local PAD_FUNCTION_BY_ALIGNMENT = {
-  [ALIGNMENT_ENUM.LEFT] = utf8_text.pad_right,
-  [ALIGNMENT_ENUM.CENTER] = utf8_text.pad_center,
-  [ALIGNMENT_ENUM.RIGHT] = utf8_text.pad_left,
+---@type table<AlignmentEnum, LeadingWidthFunctionProps>
+local LEADING_WIDTH_FUNCTION_BY_ALIGNMENT = {
+  [ALIGNMENT_ENUM.LEFT] = function() return 0 end,
+  [ALIGNMENT_ENUM.CENTER] = function(free_width)
+    return math.floor(free_width / 2)
+  end,
+  [ALIGNMENT_ENUM.RIGHT] = function(free_width) return free_width end,
 }
+---@type TableCellProps
+local EMPTY_CELL = { text = '', segments = {} }
 
 ---@alias TableContextProps RenderContextProps<TableConfigProps>
 
@@ -35,13 +39,37 @@ local function build_padded_widths(table_dto, cell_padding)
   return padded_widths
 end
 
+---@param segments GradientSegmentProps[]
+---@param cell_dto TableCellProps
+---@param leading_width integer
+---@param trailing_width integer
+---@param cell_highlight string
+local function append_cell_segments(
+  segments,
+  cell_dto,
+  leading_width,
+  trailing_width,
+  cell_highlight
+)
+  segments[#segments + 1] =
+    { text = string.rep(' ', leading_width), highlight = cell_highlight }
+  for _, cell_segment in ipairs(cell_dto.segments) do
+    segments[#segments + 1] = {
+      text = cell_segment.text,
+      highlight = cell_segment.is_code and table_highlight.GROUPS.INLINE_CODE
+        or cell_highlight,
+    }
+  end
+  segments[#segments + 1] =
+    { text = string.rep(' ', trailing_width), highlight = cell_highlight }
+end
+
 ---@param row_dto TableRowProps
 ---@param table_dto TableProps
 ---@param cell_padding integer
 ---@return GradientSegmentProps[]
 local function build_cell_row_segments(row_dto, table_dto, cell_padding)
   local vertical = border_line_builder.vertical()
-  local padding = string.rep(' ', cell_padding)
   local cell_highlight = row_dto.kind == TABLE_ROW_KIND_ENUM.HEADER
       and table_highlight.GROUPS.HEADER_CELL
     or table_highlight.GROUPS.BODY_CELL
@@ -49,12 +77,18 @@ local function build_cell_row_segments(row_dto, table_dto, cell_padding)
   local segments = { { text = vertical } }
   for column_index, column_width in ipairs(table_dto.column_widths) do
     local alignment = table_dto.alignments[column_index] or ALIGNMENT_ENUM.LEFT
-    local aligned_text = PAD_FUNCTION_BY_ALIGNMENT[alignment](
-      row_dto.cells[column_index] or '',
-      column_width
+    local cell_dto = row_dto.cells[column_index] or EMPTY_CELL
+    local free_width =
+      math.max(0, column_width - utf8_text.display_width(cell_dto.text))
+    local leading_width =
+      LEADING_WIDTH_FUNCTION_BY_ALIGNMENT[alignment](free_width)
+    append_cell_segments(
+      segments,
+      cell_dto,
+      cell_padding + leading_width,
+      cell_padding + free_width - leading_width,
+      cell_highlight
     )
-    segments[#segments + 1] =
-      { text = padding .. aligned_text .. padding, highlight = cell_highlight }
     segments[#segments + 1] = { text = vertical }
   end
   return segments

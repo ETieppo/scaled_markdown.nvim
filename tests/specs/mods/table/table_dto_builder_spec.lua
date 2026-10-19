@@ -25,6 +25,17 @@ local function build_table_dto(lines, min_column_width)
   )
 end
 
+---@param row_dto TableRowProps
+---@return string[]
+local function cell_texts(row_dto)
+  return vim.tbl_map(
+    ---@param cell_dto TableCellProps
+    ---@return string
+    function(cell_dto) return cell_dto.text end,
+    row_dto.cells
+  )
+end
+
 spec.describe('table_dto_builder', function()
   spec.it('reads row kinds and rows in source order', function()
     local table_dto = build_table_dto(TABLE_LINES)
@@ -53,12 +64,12 @@ spec.describe('table_dto_builder', function()
   spec.it('reads trimmed cell texts', function()
     local table_dto = build_table_dto(TABLE_LINES)
     expect.deep_equal(
-      table_dto.rows[1].cells,
+      cell_texts(table_dto.rows[1]),
       { 'Name', 'Value', 'Notes' },
       'header'
     )
     expect.deep_equal(
-      table_dto.rows[4].cells,
+      cell_texts(table_dto.rows[4]),
       { 'beta', '22', 'second row' },
       'body'
     )
@@ -106,6 +117,17 @@ spec.describe('table_dto_builder', function()
         build_table_dto({ '| 漢字 |', '| --- |' }, 1).column_widths,
         { 4 },
         'display width'
+      )
+    end
+  )
+
+  spec.it(
+    'sizes columns without inline code backticks',
+    function()
+      expect.deep_equal(
+        build_table_dto({ '| `abcd` |', '| --- |' }, 1).column_widths,
+        { 4 },
+        'code width'
       )
     end
   )

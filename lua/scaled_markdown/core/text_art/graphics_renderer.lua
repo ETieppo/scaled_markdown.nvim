@@ -111,8 +111,7 @@ local function write_image(bitmap, ink_width, style_props, cell_size)
       ink_width,
       image.width,
       image.height,
-      style_props.start_color,
-      style_props.end_color
+      style_props.gradient_colors
     )
   )
   file:close()

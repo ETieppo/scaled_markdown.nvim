@@ -1,6 +1,7 @@
 local ALIGNMENT_ENUM = require 'scaled_markdown.mods.table.alignment_enum'
 local TABLE_ROW_KIND_ENUM =
   require 'scaled_markdown.mods.table.table_row_kind_enum'
+local table_cell_parser = require 'scaled_markdown.mods.table.table_cell_parser'
 local utf8_text = require 'scaled_markdown.core.text.utf8_text'
 
 ---@type table<string, TableRowKindEnum>
@@ -39,8 +40,9 @@ local function collect_row(row_node, row_kind, buf)
     { row = (row_node:range()), kind = row_kind, cells = {}, alignments = {} }
   for child in row_node:iter_children() do
     if child:type() == CELL_NODE_TYPE then
-      row_dto.cells[#row_dto.cells + 1] =
+      row_dto.cells[#row_dto.cells + 1] = table_cell_parser.parse(
         utf8_text.trim(vim.treesitter.get_node_text(child, buf))
+      )
     elseif child:type() == DELIMITER_CELL_NODE_TYPE then
       row_dto.alignments[#row_dto.alignments + 1] = resolve_alignment(child)
     end
@@ -58,10 +60,10 @@ local function compute_column_widths(row_dtos, column_count, min_column_width)
   for column_index = 1, column_count do
     column_widths[column_index] = min_column_width
     for _, row_dto in ipairs(row_dtos) do
-      local cell_text = row_dto.cells[column_index] or ''
+      local cell_dto = row_dto.cells[column_index]
       column_widths[column_index] = math.max(
         column_widths[column_index],
-        utf8_text.display_width(cell_text)
+        cell_dto and utf8_text.display_width(cell_dto.text) or 0
       )
     end
   end

@@ -86,6 +86,9 @@ local function resolve_group_names(variant)
   return group_names_by_variant[variant or GRADIENT_VARIANT_ENUM.FOREGROUND]
 end
 
+---@return string[]
+function gradient_palette.colors() return vim.deepcopy(resolved_colors) end
+
 ---@param ratio number
 ---@return string
 function gradient_palette.color_at(ratio)

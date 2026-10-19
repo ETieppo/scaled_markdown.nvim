@@ -16,6 +16,13 @@ local TABLE_LINES = {
 local HEADER_GROUP = 'ScaledMarkdownTableHeaderCell'
 local BODY_GROUP = 'ScaledMarkdownTableBodyCell'
 local WIDE_SOURCE_LINE = '| a      |      b |'
+local INLINE_CODE_GROUP = 'ScaledMarkdownTableInlineCode'
+---@type string[]
+local INLINE_CODE_TABLE_LINES = {
+  '| Name | `Code` |',
+  '| :--- | -----: |',
+  '| alpha | `x = 1` and `y` |',
+}
 
 ---@param lines string[]
 ---@param mod_config? TableConfigProps
@@ -39,6 +46,19 @@ end
 ---@return string
 local function row_text(buf, row)
   return vim.trim(extmark_reader.virt_text_string(overlay_details(buf, row)))
+end
+
+---@param buf integer
+---@param row integer
+---@param highlight_group string
+---@return string[]
+local function chunk_texts_with_group(buf, row, highlight_group)
+  ---@type string[]
+  local texts = {}
+  for _, chunk in ipairs(overlay_details(buf, row).virt_text) do
+    if chunk[2] == highlight_group then texts[#texts + 1] = chunk[1] end
+  end
+  return texts
 end
 
 ---@param buf integer
@@ -116,4 +136,36 @@ spec.describe('table render', function()
       'source hidden'
     )
   end)
+
+  spec.it('renders inline code in cells without backticks', function()
+    local buf = render(INLINE_CODE_TABLE_LINES)
+    expect.equal(
+      row_text(buf, 0),
+      '│ Name  │        Code │',
+      'header code'
+    )
+    expect.equal(row_text(buf, 2), '│ alpha │ x = 1 and y │', 'body code')
+  end)
+
+  spec.it(
+    'highlights inline code in cells with the inline code group',
+    function()
+      local buf = render(INLINE_CODE_TABLE_LINES)
+      expect.deep_equal(
+        chunk_texts_with_group(buf, 0, INLINE_CODE_GROUP),
+        { 'Code' },
+        'header code chunk'
+      )
+      expect.deep_equal(
+        chunk_texts_with_group(buf, 2, INLINE_CODE_GROUP),
+        { 'x = 1', 'y' },
+        'body code chunks'
+      )
+      expect.contains(
+        row_groups(buf, 2),
+        BODY_GROUP,
+        'plain text keeps body group'
+      )
+    end
+  )
 end)

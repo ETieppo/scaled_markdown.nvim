@@ -57,7 +57,7 @@ print(greeting)
 | Name | Value | Notes |
 | :--- | :---: | ----: |
 | alpha | 1 | first |
-| beta | 22 | second row |
+| beta | `22` | second `row` |
 
 ```rust
 fn main(){

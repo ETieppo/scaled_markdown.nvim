@@ -29,8 +29,7 @@ local PRIMARY_HEADING = 'Primary Heading'
 local GRAPHICS_STYLE = {
   font = REQUIRED_FONT,
   line_height_cells = 3,
-  start_color = '#7aa2f7',
-  end_color = '#bb9af7',
+  gradient_colors = { '#7aa2f7', '#bb9af7' },
 }
 ---@type string[]
 local HEADING_LINES = {
