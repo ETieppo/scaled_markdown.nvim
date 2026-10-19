@@ -7,19 +7,18 @@ local buffer_attachment =
 local config_store = require 'scaled_markdown.core.config.config_store'
 local plugin_setup = require 'scaled_markdown.core.setup.plugin_setup'
 
-local record scaled_markdown
-end
+local record scaled_markdown end
 
 local MOD_PROPS_LIST <const>: {ModProps} = {
   require 'scaled_markdown.mods.heading',
   require 'scaled_markdown.mods.text',
   require 'scaled_markdown.mods.inline_code',
-  --require 'scaled_markdown.mods.link',
-  --require 'scaled_markdown.mods.link_reference',
-  --require 'scaled_markdown.mods.image',
+  require 'scaled_markdown.mods.link',
+  require 'scaled_markdown.mods.link_reference',
+  require 'scaled_markdown.mods.image',
   require 'scaled_markdown.mods.list',
   --require 'scaled_markdown.mods.checkbox',
-  --require 'scaled_markdown.mods.quote',
+  require 'scaled_markdown.mods.quote',
   require 'scaled_markdown.mods.code_block',
   --require 'scaled_markdown.mods.table',
   --require 'scaled_markdown.mods.thematic_break',
