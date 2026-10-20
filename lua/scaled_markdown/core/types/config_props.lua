@@ -15,6 +15,7 @@
 ---@field fallback_cell_width_pixels? integer
 ---@field fallback_cell_height_pixels? integer
 ---@field allow_tmux_passthrough? boolean
+---@field graphics_protocol? GraphicsProtocolEnum
 
 ---@class ConfigProps
 ---@field enabled? boolean

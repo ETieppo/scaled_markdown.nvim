@@ -71,6 +71,10 @@ function extmark_writer.new(buf, namespace_id, revealed_rows, text_offset)
     return ok and extmark_id or nil
   end
 
+  ---@param row integer
+  ---@return boolean
+  function writer.is_revealed(row) return revealed_rows[row] == true end
+
   return writer
 end
 

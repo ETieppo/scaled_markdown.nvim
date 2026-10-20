@@ -1,3 +1,5 @@
+local GRAPHICS_PROTOCOL_ENUM =
+  require 'scaled_markdown.core.enums.graphics_protocol_enum'
 local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 local config_store = require 'scaled_markdown.core.config.config_store'
 local graphics_renderer =
@@ -59,8 +61,8 @@ local function report_terminal()
   if capability.is_inside_tmux then
     vim.health.info 'running inside tmux: graphics use passthrough'
   end
-  if capability.supports_kitty_graphics then
-    vim.health.ok 'terminal supports kitty graphics placeholders'
+  if capability.protocol ~= GRAPHICS_PROTOCOL_ENUM.NONE then
+    vim.health.ok(('graphics protocol: %s'):format(capability.protocol))
   else
     vim.health.warn(
       ('kitty graphics unavailable: %s'):format(capability.unsupported_reason)

@@ -4,6 +4,8 @@ local heading_dto_builder =
   require 'scaled_markdown.mods.heading.heading_dto_builder'
 local heading_line_builder =
   require 'scaled_markdown.mods.heading.heading_line_builder'
+local image_placement_registry =
+  require 'scaled_markdown.core.render.image_placement_registry'
 local heading_style_resolver =
   require 'scaled_markdown.mods.heading.heading_style_resolver'
 local text_art_service =
@@ -128,6 +130,16 @@ local function render_text_art(heading_dto, text_art_dto, context_dto)
     virt_lines = extra_lines,
   })
   hide_setext_underline(heading_dto, context_dto)
+  if
+    text_art_dto.positioned_image_id
+    and not context_dto.writer.is_revealed(heading_dto.row)
+  then
+    image_placement_registry.add(context_dto.buf, {
+      row = heading_dto.row,
+      col = heading_dto.start_col,
+      image_id = text_art_dto.positioned_image_id,
+    })
+  end
 end
 
 ---@param heading_dto HeadingProps

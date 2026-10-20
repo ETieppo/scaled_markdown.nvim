@@ -21,13 +21,32 @@ Most markdown plugins can only change colors and add icons, because a terminal c
 
 | Renderer   | How it draws headings                                               | Requirements                                              |
 | ---------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
-| `graphics` | Real anti-aliased images through Kitty graphics placeholders        | Kitty, Ghostty or WezTerm, `termguicolors` (tmux works too) |
+| `graphics` | Real anti-aliased images (Kitty placeholders or sixel)              | A supported terminal (see below) and `termguicolors`      |
 | `typeface` | Glyphs rasterized from a system font into octant/block characters   | An installed TrueType/OpenType font                       |
 | `toilet`   | Text art from `toilet` fonts                                        | The `toilet` binary                                       |
 | `figlet`   | Text art from `figlet` fonts                                        | The `figlet` binary                                       |
 | `plain`    | No scaling, only styling                                            | Nothing                                                   |
 
 If the configured renderer is not available, the plugin tries the others in this order: `graphics` → `typeface` → `toilet` → `figlet`.
+
+### Terminal support for `graphics`
+
+The plugin asks the terminal what it supports (XTVERSION and primary device attributes) and picks a protocol on its own:
+
+| Protocol            | Terminals                                                                      | Notes |
+| ------------------- | ------------------------------------------------------------------------------ | ----- |
+| `kitty_placeholder` | Kitty 0.28+, Ghostty                                                           | Images live in the text, so scrolling and splits stay smooth. Also works inside tmux |
+| `sixel`             | WezTerm, foot, Konsole, xterm (`-ti vt340`), Windows Terminal, iTerm2, contour, mlterm | Images are drawn at screen positions after each redraw |
+
+With sixel, keep these limits in mind:
+
+- the screen briefly redraws when headings move, for example while scrolling
+- a heading is not drawn while it is partly off screen, under a floating window or the completion menu, or on the last screen rows
+- the image edges are blended with the `Normal` background color
+- sixel is not used inside tmux, where headings fall back to `typeface`
+- xterm needs sixel turned on and enough color registers, for example `xterm -ti vt340 -xrm 'XTerm*numColorRegisters: 256'`
+
+If detection gets it wrong, set `terminal.graphics_protocol` to `kitty_placeholder`, `sixel` or `none`. Sixel cannot scale images, so headings only line up with the text when the cell size is right. `:checkhealth scaled_markdown` shows the protocol in use and whether the cell size was measured.
 
 ### Inside tmux
 
@@ -96,6 +115,7 @@ require('scaled_markdown').setup({
     fallback_cell_width_pixels = 10,
     fallback_cell_height_pixels = 22,
     allow_tmux_passthrough = true,
+    graphics_protocol = 'auto',
   },
   mods = {},
 })
@@ -106,6 +126,7 @@ Optional keys:
 - `gradient.colors`: one hex color or a list of them, such as `{ '#89b4fa', '#cba6f7' }`. When it is not set, the colors come from your colorscheme.
 - `gradient.fill_foreground`: text color for headings drawn on a gradient fill.
 - `terminal.cell_width_pixels` / `terminal.cell_height_pixels`: set the cell size by hand when it cannot be measured.
+- `terminal.graphics_protocol`: `auto`, `kitty_placeholder`, `sixel` or `none`.
 - `terminal.allow_tmux_passthrough`: lets the plugin turn on `allow-passthrough` for its own tmux pane. With `false`, graphics inside tmux need you to set it yourself.
 
 ### Mods

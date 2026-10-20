@@ -1,3 +1,5 @@
+local GRAPHICS_PROTOCOL_ENUM =
+  require 'scaled_markdown.core.enums.graphics_protocol_enum'
 local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 
 ---@type ConfigProps
@@ -20,6 +22,7 @@ local DEFAULT_CONFIG = {
     fallback_cell_width_pixels = 10,
     fallback_cell_height_pixels = 22,
     allow_tmux_passthrough = true,
+    graphics_protocol = GRAPHICS_PROTOCOL_ENUM.AUTO,
   },
   mods = {},
 }

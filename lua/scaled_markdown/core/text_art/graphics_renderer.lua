@@ -1,3 +1,6 @@
+local CORE_CONSTANTS = require 'scaled_markdown.core.constants'
+local GRAPHICS_PROTOCOL_ENUM =
+  require 'scaled_markdown.core.enums.graphics_protocol_enum'
 local coverage_rasterizer =
   require 'scaled_markdown.core.raster.coverage_rasterizer'
 local font_face_loader = require 'scaled_markdown.core.font.font_face_loader'
@@ -8,6 +11,8 @@ local graphics_image_registry =
   require 'scaled_markdown.core.text_art.graphics_image_registry'
 local graphics_pixel_encoder =
   require 'scaled_markdown.core.text_art.graphics_pixel_encoder'
+local graphics_sixel_builder =
+  require 'scaled_markdown.core.text_art.graphics_sixel_builder'
 local graphics_placeholder_builder =
   require 'scaled_markdown.core.text_art.graphics_placeholder_builder'
 local kitty_graphics_protocol =
@@ -19,12 +24,15 @@ local terminal_cell_size =
 local text_line_layout = require 'scaled_markdown.core.layout.text_line_layout'
 local text_word_wrapper =
   require 'scaled_markdown.core.layout.text_word_wrapper'
+local theme_color_resolver =
+  require 'scaled_markdown.core.highlight.theme_color_resolver'
 
 local LINE_HEIGHT_TO_POINT_SIZE = 0.82
 local LINE_SPACING_PIXELS = 1
 local CANVAS_PADDING_PIXELS = 2
 local NO_INK_WIDTH = 0
 local MIN_VISIBLE_COVERAGE = 0.5 / 255
+local FALLBACK_BACKGROUND_COLOR = '#000000'
 
 ---@class GraphicsImageProps
 ---@field bitmap CoverageBitmapProps
@@ -117,14 +125,56 @@ local function render_image(text, style_props, width, cell_size)
   }
 end
 
+---@param columns integer
+---@param rows integer
+---@return string[]
+local function build_blank_lines(columns, rows)
+  ---@type string[]
+  local lines = {}
+  for row_index = 1, rows do
+    lines[row_index] = string.rep(' ', columns)
+  end
+  return lines
+end
+
+---@param image GraphicsImageProps
+---@param style_props TextArtStyleProps
+---@param columns integer
+---@param rows integer
+---@return TextArtProps
+local function place_sixel_image(image, style_props, columns, rows)
+  local payload = graphics_sixel_builder.build(
+    image.bitmap,
+    image.ink_width,
+    image.width,
+    image.height,
+    style_props.gradient_colors,
+    theme_color_resolver.resolve_background(CORE_CONSTANTS.PADDING_HIGHLIGHT)
+      or FALLBACK_BACKGROUND_COLOR
+  )
+  return {
+    lines = build_blank_lines(columns, rows),
+    highlight = CORE_CONSTANTS.PADDING_HIGHLIGHT,
+    positioned_image_id = graphics_image_registry.register_positioned(
+      payload,
+      columns,
+      rows
+    ),
+  }
+end
+
 ---@param image GraphicsImageProps
 ---@param style_props TextArtStyleProps
 ---@param cell_size CellSizeProps
+---@param protocol GraphicsProtocolEnum
 ---@return TextArtProps?
-local function place_image(image, style_props, cell_size)
+local function place_image(image, style_props, cell_size, protocol)
   local columns = math.ceil(image.width / cell_size.width)
   local rows = math.ceil(image.height / cell_size.height)
   if rows > graphics_placeholder_builder.max_rows() then return nil end
+  if protocol == GRAPHICS_PROTOCOL_ENUM.SIXEL then
+    return place_sixel_image(image, style_props, columns, rows)
+  end
   local image_id, highlight_group = graphics_image_registry.allocate()
   kitty_graphics_protocol.transmit_pixels(
     image_id,
@@ -151,15 +201,17 @@ end
 ---@param width integer
 ---@return TextArtProps?
 local function render(text, style_props, width)
+  local protocol = terminal_capability.protocol()
+  if protocol == GRAPHICS_PROTOCOL_ENUM.NONE then return nil end
   local cell_size = terminal_cell_size.resolve()
   local image = render_image(text, style_props, width, cell_size)
-  return image and place_image(image, style_props, cell_size)
+  return image and place_image(image, style_props, cell_size, protocol)
 end
 
 ---@return boolean
 function graphics_renderer.is_available()
   return font_resolver.is_available()
-    and terminal_capability.supports_kitty_graphics()
+    and terminal_capability.protocol() ~= GRAPHICS_PROTOCOL_ENUM.NONE
 end
 
 ---@param text string

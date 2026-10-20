@@ -1,7 +1,11 @@
 local CORE_CONSTANTS = require 'scaled_markdown.core.constants'
 local config_store = require 'scaled_markdown.core.config.config_store'
 local extmark_writer = require 'scaled_markdown.core.render.extmark_writer'
+local image_placement_registry =
+  require 'scaled_markdown.core.render.image_placement_registry'
 local mod_registry = require 'scaled_markdown.core.registry.mod_registry'
+local positioned_image_painter =
+  require 'scaled_markdown.core.render.positioned_image_painter'
 local render_context_builder =
   require 'scaled_markdown.core.render.render_context_builder'
 local reveal_range = require 'scaled_markdown.core.render.reveal_range'
@@ -69,9 +73,11 @@ function render_pipeline.namespace_id() return namespace_id end
 
 ---@param buf integer
 function render_pipeline.clear(buf)
+  image_placement_registry.clear(buf)
   if vim.api.nvim_buf_is_valid(buf) then
     vim.api.nvim_buf_clear_namespace(buf, namespace_id, 0, -1)
   end
+  positioned_image_painter.schedule()
 end
 
 ---@param buf integer
@@ -106,6 +112,7 @@ function render_pipeline.render(buf)
       end_row
     )
   end
+  positioned_image_painter.schedule()
 end
 
 return render_pipeline

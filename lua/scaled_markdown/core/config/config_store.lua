@@ -1,4 +1,6 @@
 local DEFAULT_CONFIG = require 'scaled_markdown.core.config.default_config'
+local GRAPHICS_PROTOCOL_ENUM =
+  require 'scaled_markdown.core.enums.graphics_protocol_enum'
 local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 
 ---@class config_store
@@ -11,6 +13,12 @@ local current_config = vim.deepcopy(DEFAULT_CONFIG)
 ---@return boolean
 local function is_valid_renderer(renderer)
   return vim.tbl_contains(vim.tbl_values(RENDERER_ENUM), renderer)
+end
+
+---@param protocol any
+---@return boolean
+local function is_valid_graphics_protocol(protocol)
+  return vim.tbl_contains(vim.tbl_values(GRAPHICS_PROTOCOL_ENUM), protocol)
 end
 
 ---@param config ConfigProps
@@ -28,6 +36,12 @@ local function validate_config(config)
   vim.validate('gradient', config.gradient, 'table')
   vim.validate('terminal', config.terminal, 'table')
   vim.validate('mods', config.mods, 'table')
+  vim.validate(
+    'terminal.graphics_protocol',
+    config.terminal.graphics_protocol,
+    is_valid_graphics_protocol,
+    'a GraphicsProtocolEnum value'
+  )
 end
 
 ---@param user_config? ConfigProps

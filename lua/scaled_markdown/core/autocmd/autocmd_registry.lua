@@ -3,6 +3,18 @@ local buffer_attachment =
   require 'scaled_markdown.core.buffer.buffer_attachment'
 local config_store = require 'scaled_markdown.core.config.config_store'
 
+---@type string[]
+local TERMINAL_CHANGE_EVENTS = { 'FocusGained', 'VimResume' }
+---@type string[]
+local LAYOUT_CHANGE_EVENTS = {
+  'WinClosed',
+  'WinNew',
+  'VimResized',
+  'TabEnter',
+  'CmdlineLeave',
+  'CompleteDone',
+}
+
 ---@class autocmd_registry
 local autocmd_registry = {}
 
@@ -14,14 +26,8 @@ local function should_auto_attach(buf)
     and vim.tbl_contains(config.file_types, vim.bo[buf].filetype)
 end
 
----@param on_colorscheme_changed fun()
----@param on_exit fun()
----@param on_terminal_changed fun()
-function autocmd_registry.register(
-  on_colorscheme_changed,
-  on_exit,
-  on_terminal_changed
-)
+---@param handlers AutocmdHandlersProps
+function autocmd_registry.register(handlers)
   local augroup_id =
     vim.api.nvim_create_augroup(CORE_CONSTANTS.AUGROUP_NAME, { clear = true })
 
@@ -41,19 +47,24 @@ function autocmd_registry.register(
   vim.api.nvim_create_autocmd('ColorScheme', {
     group = augroup_id,
     callback = function()
-      on_colorscheme_changed()
+      handlers.on_colorscheme_changed()
       buffer_attachment.refresh_all()
     end,
   })
 
-  vim.api.nvim_create_autocmd({ 'FocusGained', 'VimResume' }, {
+  vim.api.nvim_create_autocmd(TERMINAL_CHANGE_EVENTS, {
     group = augroup_id,
-    callback = on_terminal_changed,
+    callback = handlers.on_terminal_changed,
+  })
+
+  vim.api.nvim_create_autocmd(LAYOUT_CHANGE_EVENTS, {
+    group = augroup_id,
+    callback = handlers.on_layout_changed,
   })
 
   vim.api.nvim_create_autocmd('VimLeavePre', {
     group = augroup_id,
-    callback = on_exit,
+    callback = handlers.on_exit,
   })
 end
 

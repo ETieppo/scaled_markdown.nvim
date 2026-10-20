@@ -95,9 +95,9 @@ spec.describe('graphics renderer', function()
     payloads = capture_terminal_payloads()
     stub.replace(
       terminal_capability,
-      'supports_kitty_graphics',
-      ---@return boolean
-      function() return true end
+      'protocol',
+      ---@return GraphicsProtocolEnum
+      function() return 'kitty_placeholder' end
     )
     plugin_session.start {
       renderer = RENDERER_ENUM.GRAPHICS,
