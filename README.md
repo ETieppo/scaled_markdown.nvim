@@ -4,8 +4,6 @@ Markdown rendering for Neovim with **scaled headings**.
 
 Most markdown plugins can only change colors and add icons, because a terminal cell is always the same size. `scaled_markdown.nvim` gets around this by drawing headings as large text, either as real images through the Kitty graphics protocol or as Unicode block-character art. Everything else in the document (lists, quotes, tables, code blocks, links and more) is rendered in place with extmarks and conceal.
 
-<img src="./assets/sample.png" alt="sample">
-
 ## Features
 
 - **Scaled headings** with a per-level size, a theme-aware color gradient, icons and pill-shaped line styles
@@ -38,54 +36,10 @@ Most markdown plugins can only change colors and add icons, because a terminal c
 <img src="./assets/latex.png">
 
 #### Don't you like the colors?
-No worry! you can customize so many items
+No worries! you can customize so many items
 
 <img src="./assets/colors.png">
 
-## Renderers
-
-Note that not all of this items is mandatory
-| Renderer   | How it draws headings                                               | Requirements                                              |
-| ---------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
-| `graphics` | Real anti-aliased images (Kitty placeholders or sixel)              | A supported terminal (see below) and `termguicolors`      |
-| `typeface` | Glyphs rasterized from a system font into octant/block characters   | An installed TrueType/OpenType font                       |
-| `toilet`   | Text art from `toilet` fonts                                        | The `toilet` binary                                       |
-| `figlet`   | Text art from `figlet` fonts                                        | The `figlet` binary                                       |
-| `plain`    | No scaling, only styling                                            | Nothing                                                   |
-
-If the configured renderer is not available, the plugin tries the others in this order: `graphics` → `typeface` → `toilet` → `figlet`.
-
-### Terminal support for `graphics`
-
-The plugin asks the terminal what it supports (XTVERSION and primary device attributes) and picks a protocol on its own:
-
-| Protocol            | Terminals                                                                      | Notes |
-| ------------------- | ------------------------------------------------------------------------------ | ----- |
-| `kitty_placeholder` | Kitty 0.28+, Ghostty                                                           | Images live in the text, so scrolling and splits stay smooth. Also works inside tmux |
-| `sixel`             | WezTerm, foot, Konsole, xterm (`-ti vt340`), Windows Terminal, iTerm2, contour, mlterm | Images are drawn at screen positions after each redraw. Also works inside tmux built with sixel support |
-
-With sixel, keep these limits in mind:
-
-- the screen briefly redraws when headings move, for example while scrolling
-- a heading is not drawn while it is partly off screen, under a floating window or the completion menu, or on the last screen rows
-- the image edges are blended with the `Normal` background color
-- inside tmux, sixel needs a tmux built with sixel support (`tmux display -p '#{sixel_support}'` prints `1`) and a client terminal that tmux knows has the `sixel` feature
-- xterm needs sixel turned on and enough color registers, for example `xterm -ti vt340 -xrm 'XTerm*numColorRegisters: 256'`
-
-If detection gets it wrong, set `terminal.graphics_protocol` to `kitty_placeholder`, `sixel` or `none`. Sixel cannot scale images, so headings only line up with the text when the cell size is right. `:checkhealth scaled_markdown` shows the protocol in use and whether the cell size was measured.
-
-### Inside tmux
-
-The `graphics` renderer also works inside tmux. With sixel terminals, the plugin hands the image to tmux, which keeps it in the pane and redraws it on its own; no tmux option is changed. With Kitty and Ghostty (tmux 3.3 or newer), images are sent straight through the terminal connection, with no temporary files, so they work over SSH too. In that case the plugin:
-
-- reads the outer terminal, its true color support and its cell size from the tmux client
-- sets `allow-passthrough` to `all` (or `on` on tmux versions without `all`) on its own pane only, never globally, and puts the old value back when Neovim exits (turn this off with `terminal.allow_tmux_passthrough = false`)
-
-The tmux client needs the `RGB` feature, because the image id travels in the text color. Most setups already have it. If `:checkhealth scaled_markdown` says it is missing, add this to `tmux.conf`:
-
-```tmux
-set -as terminal-features ',xterm*:RGB'
-```
 
 ## Requirements
 
@@ -154,6 +108,52 @@ Optional keys:
 - `terminal.cell_width_pixels` / `terminal.cell_height_pixels`: set the cell size by hand when it cannot be measured.
 - `terminal.graphics_protocol`: `auto`, `kitty_placeholder`, `sixel` or `none`.
 - `terminal.allow_tmux_passthrough`: lets the plugin turn on `allow-passthrough` for its own tmux pane. With `false`, graphics inside tmux need you to set it yourself.
+
+## Renderers
+
+| Renderer   | How it draws headings                                               | Requirements                                              |
+| ---------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `graphics` | Real anti-aliased images (Kitty placeholders or sixel)              | A supported terminal (see below) and `termguicolors`      |
+| `typeface` | Glyphs rasterized from a system font into octant/block characters   | An installed TrueType/OpenType font                       |
+| `toilet`   | Text art from `toilet` fonts                                        | The `toilet` binary                                       |
+| `figlet`   | Text art from `figlet` fonts                                        | The `figlet` binary                                       |
+| `plain`    | No scaling, only styling                                            | Nothing                                                   |
+
+If the configured renderer is not available, the plugin tries the others in this order: `graphics` → `typeface` → `toilet` → `figlet`.
+
+### Terminal support for `graphics`
+
+The plugin asks the terminal what it supports (XTVERSION and primary device attributes) and picks a protocol on its own:
+
+| Protocol            | Terminals                                                                      | Notes |
+| ------------------- | ------------------------------------------------------------------------------ | ----- |
+| `kitty_placeholder` | Kitty 0.28+, Ghostty                                                           | Images live in the text, so scrolling and splits stay smooth. Also works inside tmux |
+| `sixel`             | WezTerm, foot, Konsole, xterm (`-ti vt340`), Windows Terminal, iTerm2, contour, mlterm | Images are drawn at screen positions after each redraw. Also works inside tmux built with sixel support |
+
+With sixel, keep these limits in mind:
+
+- the screen briefly redraws when headings move, for example while scrolling
+- a heading is not drawn while it is partly off screen, under a floating window or the completion menu, or on the last screen rows
+- the image edges are blended with the `Normal` background color
+- inside tmux, sixel needs a tmux built with sixel support (`tmux display -p '#{sixel_support}'` prints `1`) and a client terminal that tmux knows has the `sixel` feature
+- xterm needs sixel turned on and enough color registers, for example `xterm -ti vt340 -xrm 'XTerm*numColorRegisters: 256'`
+
+If detection gets it wrong, set `terminal.graphics_protocol` to `kitty_placeholder`, `sixel` or `none`. Sixel cannot scale images, so headings only line up with the text when the cell size is right. `:checkhealth scaled_markdown` shows the protocol in use and whether the cell size was measured.
+
+### Inside tmux
+
+The `graphics` renderer also works inside tmux. With sixel terminals, the plugin hands the image to tmux, which keeps it in the pane and redraws it on its own; no tmux option is changed. With Kitty and Ghostty (tmux 3.3 or newer), images are sent straight through the terminal connection, with no temporary files, so they work over SSH too. In that case the plugin:
+
+- reads the outer terminal, its true color support and its cell size from the tmux client
+- sets `allow-passthrough` to `all` (or `on` on tmux versions without `all`) on its own pane only, never globally, and puts the old value back when Neovim exits (turn this off with `terminal.allow_tmux_passthrough = false`)
+
+The tmux client needs the `RGB` feature, because the image id travels in the text color. Most setups already have it. If `:checkhealth scaled_markdown` says it is missing, add this to `tmux.conf`:
+
+```tmux
+set -as terminal-features ',xterm*:RGB'
+```
+
+
 
 ### Mods
 
