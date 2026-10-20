@@ -137,21 +137,30 @@ spec.describe('code_block render', function()
 
   spec.it('adds side borders to every content row', function()
     local buf = render(FENCED_LINES)
-    local left =
+    local spacer =
       extmark_reader.find(buf, extmark_predicates.inline_on_row(CONTENT_ROW))
-    local right = extmark_reader.find(
-      buf,
-      ---@param details vim.api.keyset.set_extmark
-      ---@param entry ExtmarkEntryProps
-      ---@return boolean
-      function(details, entry)
-        return entry.row == CONTENT_ROW and details.virt_text_win_col ~= nil
-      end
-    )
-    expect.equal(left.details.virt_text[1][1], VERTICAL_BORDER, 'left border')
-    expect.equal(left.details.virt_text[2][1], ' ', 'padding')
-    expect.equal(right.details.virt_text[1][1], VERTICAL_BORDER, 'right border')
-    expect.equal(right.details.virt_text_win_col, MIN_WIDTH - 1, 'right column')
+    ---@type table<integer, string>
+    local border_by_column = {}
+    for _, entry in
+      ipairs(extmark_reader.find_all(
+        buf,
+        ---@param details vim.api.keyset.set_extmark
+        ---@param entry ExtmarkEntryProps
+        ---@return boolean
+        function(details, entry)
+          return entry.row == CONTENT_ROW and details.virt_text_win_col ~= nil
+        end
+      ))
+    do
+      border_by_column[entry.details.virt_text_win_col] =
+        entry.details.virt_text[1][1]
+    end
+    expect.equal(spacer.details.virt_text[1][1], ' ', 'left border spacer')
+    expect.equal(spacer.details.virt_text[2][1], ' ', 'padding')
+    expect.deep_equal(border_by_column, {
+      [0] = VERTICAL_BORDER,
+      [MIN_WIDTH - 1] = VERTICAL_BORDER,
+    }, 'border columns')
   end)
 
   spec.it('grows the box to fit the widest content line', function()

@@ -100,17 +100,25 @@ local function render_side_borders(
     math.min(code_block_dto.left_col, #line),
     {
       virt_text = {
-        { vertical, highlight_group },
+        {
+          string.rep(' ', utf8_text.display_width(vertical)),
+          CORE_CONSTANTS.PADDING_HIGHLIGHT,
+        },
         { padding, CORE_CONSTANTS.PADDING_HIGHLIGHT },
       },
       virt_text_pos = 'inline',
     }
   )
 
-  context_dto.writer.set_extmark(row, 0, {
-    virt_text = { { vertical, highlight_group } },
-    virt_text_win_col = code_block_dto.left_col + box_width - 1,
-  })
+  for _, border_col in ipairs {
+    code_block_dto.left_col,
+    code_block_dto.left_col + box_width - 1,
+  } do
+    context_dto.writer.set_extmark(row, 0, {
+      virt_text = { { vertical, highlight_group } },
+      virt_text_win_col = border_col,
+    })
+  end
 end
 
 ---@param row integer
