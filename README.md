@@ -17,8 +17,34 @@ Most markdown plugins can only change colors and add icons, because a terminal c
 - **Modular design**: each markdown element is its own mod and can be configured or turned off on its own
 - **`:checkhealth` support** for parsers, renderers and terminal capabilities
 
+#### Headings
+
+<img src="./assets/headings.png">
+
+#### Code blocks
+
+<img src="./assets/code_block.png">
+
+#### Tables
+
+<img src="./assets/tables.png">
+
+#### Callouts
+
+<img src="./assets/callouts.png">
+
+#### LaTeX
+
+<img src="./assets/latex.png">
+
+#### Don't you like the colors?
+No worry! you can customize so many items
+
+<img src="./assets/colors.png">
+
 ## Renderers
 
+Note that not all of this items is mandatory
 | Renderer   | How it draws headings                                               | Requirements                                              |
 | ---------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
 | `graphics` | Real anti-aliased images (Kitty placeholders or sixel)              | A supported terminal (see below) and `termguicolors`      |
