@@ -21,7 +21,6 @@ local DEFAULT_HEADING_CONFIG = {
     },
     [RENDERER_ENUM.TYPEFACE] = {
       font = 'FreeSans:bold',
-      symbols = 'octant+solid+half+quad',
       rows_by_level = { 7, 5, 4 },
     },
     [RENDERER_ENUM.TOILET] = {

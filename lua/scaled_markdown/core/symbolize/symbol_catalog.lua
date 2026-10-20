@@ -3,9 +3,17 @@ local OCTANT_CODEPOINTS_BY_MASK =
   require 'scaled_markdown.core.symbolize.octant_codepoints'
 local SYMBOL_CELL_GEOMETRY =
   require 'scaled_markdown.core.symbolize.symbol_cell_geometry'
+local WEDGE_SHAPES = require 'scaled_markdown.core.symbolize.wedge_shapes'
 local font_binary_reader =
   require 'scaled_markdown.core.font.font_binary_reader'
 
+local MASK_GRID_COLUMNS = 2
+local SUBCELL_CENTRE_OFFSET = 0.5
+local EIGHTHS_PER_CELL = 8
+local LOWER_EIGHTHS_FIRST_CODEPOINT = 0x2581
+local LEFT_EIGHTHS_LAST_CODEPOINT = 0x258F
+local UPPER_ONE_EIGHTH_CODEPOINT = 0x2594
+local RIGHT_ONE_EIGHTH_CODEPOINT = 0x2595
 local SPACE_CODEPOINT = 0x20
 local FULL_BLOCK_CODEPOINT = 0x2588
 local UPPER_HALF_CODEPOINT = 0x2580
@@ -48,22 +56,38 @@ local BRAILLE_DOT_BITS_BY_CELL = { 1, 8, 2, 16, 4, 32, 64, 128 }
 local CLASS_SEPARATOR_PATTERN = '([+-]?)([%w]+)'
 local REMOVE_SIGN = '-'
 
----@class SymbolDefinitionProps
----@field grid_rows integer
----@field mask integer
----@field codepoint integer
-
 ---@class symbol_catalog
 local symbol_catalog = {}
 
 ---@type table<string, SymbolCandidateProps[]>
 local candidates_by_specification = {}
 
+---@param grid_columns integer
+---@param grid_rows integer
+---@param mask integer
+---@param codepoint integer
+---@return SymbolDefinitionProps
+local function masked(grid_columns, grid_rows, mask, codepoint)
+  return {
+    codepoint = codepoint,
+    covers = function(x, y)
+      local bit = math.floor(
+        2
+          ^ (
+            math.floor(y * grid_rows) * grid_columns
+            + math.floor(x * grid_columns)
+          )
+      )
+      return font_binary_reader.has_flag(mask, bit)
+    end,
+  }
+end
+
 ---@param mask integer
 ---@param codepoint integer
 ---@return SymbolDefinitionProps
 local function single_row(mask, codepoint)
-  return { grid_rows = 1, mask = mask, codepoint = codepoint }
+  return masked(MASK_GRID_COLUMNS, 1, mask, codepoint)
 end
 
 ---@param grid_rows integer
@@ -72,14 +96,75 @@ end
 local function build_masked_definitions(grid_rows, codepoint_for_mask)
   ---@type SymbolDefinitionProps[]
   local definitions = {}
-  for mask = 0, 2 ^ (grid_rows * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS) - 1 do
-    definitions[#definitions + 1] = {
-      grid_rows = grid_rows,
-      mask = math.floor(mask),
-      codepoint = codepoint_for_mask(math.floor(mask)),
-    }
+  for mask = 0, 2 ^ (grid_rows * MASK_GRID_COLUMNS) - 1 do
+    local integer_mask = math.floor(mask)
+    definitions[#definitions + 1] = masked(
+      MASK_GRID_COLUMNS,
+      grid_rows,
+      integer_mask,
+      codepoint_for_mask(integer_mask)
+    )
   end
   return definitions
+end
+
+---@return SymbolDefinitionProps[]
+local function build_eighth_definitions()
+  ---@type SymbolDefinitionProps[]
+  local definitions = {}
+  for eighths = 1, EIGHTHS_PER_CELL - 1 do
+    local filled_fraction = eighths / EIGHTHS_PER_CELL
+    definitions[#definitions + 1] = {
+      codepoint = LOWER_EIGHTHS_FIRST_CODEPOINT + eighths - 1,
+      covers = function(_, y) return y >= 1 - filled_fraction end,
+    }
+    definitions[#definitions + 1] = {
+      codepoint = LEFT_EIGHTHS_LAST_CODEPOINT - eighths + 1,
+      covers = function(x) return x < filled_fraction end,
+    }
+  end
+  definitions[#definitions + 1] = {
+    codepoint = UPPER_ONE_EIGHTH_CODEPOINT,
+    covers = function(_, y) return y < 1 / EIGHTHS_PER_CELL end,
+  }
+  definitions[#definitions + 1] = {
+    codepoint = RIGHT_ONE_EIGHTH_CODEPOINT,
+    covers = function(x) return x >= 1 - 1 / EIGHTHS_PER_CELL end,
+  }
+  return definitions
+end
+
+---@param origin number[]
+---@param target number[]
+---@param x number
+---@param y number
+---@return number
+local function side_of_line(origin, target, x, y)
+  return (target[1] - origin[1]) * (y - origin[2])
+    - (target[2] - origin[2]) * (x - origin[1])
+end
+
+---@param wedge_shape WedgeShapeProps
+---@return SymbolDefinitionProps
+local function wedge_definition(wedge_shape)
+  local line_start, line_end = wedge_shape.line_start, wedge_shape.line_end
+  local corner_side = side_of_line(
+    line_start,
+    line_end,
+    wedge_shape.corner[1],
+    wedge_shape.corner[2]
+  )
+  return {
+    codepoint = wedge_shape.codepoint,
+    covers = function(x, y)
+      return side_of_line(line_start, line_end, x, y) * corner_side > 0
+    end,
+  }
+end
+
+---@return SymbolDefinitionProps[]
+local function build_wedge_definitions()
+  return vim.tbl_map(wedge_definition, WEDGE_SHAPES)
 end
 
 ---@param mask integer
@@ -115,8 +200,8 @@ local DEFINITION_BUILDERS = {
   end,
   [SYMBOL_CLASS_ENUM.HORIZONTAL_HALF] = function()
     return {
-      { grid_rows = 2, mask = 3, codepoint = UPPER_HALF_CODEPOINT },
-      { grid_rows = 2, mask = 12, codepoint = LOWER_HALF_CODEPOINT },
+      masked(MASK_GRID_COLUMNS, 2, 3, UPPER_HALF_CODEPOINT),
+      masked(MASK_GRID_COLUMNS, 2, 12, LOWER_HALF_CODEPOINT),
     }
   end,
   [SYMBOL_CLASS_ENUM.VERTICAL_HALF] = function()
@@ -147,6 +232,8 @@ local DEFINITION_BUILDERS = {
   [SYMBOL_CLASS_ENUM.BRAILLE] = function()
     return build_masked_definitions(4, braille_codepoint)
   end,
+  [SYMBOL_CLASS_ENUM.EIGHTH] = build_eighth_definitions,
+  [SYMBOL_CLASS_ENUM.WEDGE] = build_wedge_definitions,
 }
 ---@type table<SymbolClassEnum, SymbolClassEnum[]>
 local CLASS_EXPANSIONS = {
@@ -204,27 +291,22 @@ end
 ---@param definition SymbolDefinitionProps
 ---@return integer[]
 local function expand_subcells(definition)
-  local subrows_per_grid_row =
-    math.floor(SYMBOL_CELL_GEOMETRY.SUBCELL_ROWS / definition.grid_rows)
   ---@type integer[]
   local filled_subcells = {}
-  for grid_row = 0, definition.grid_rows - 1 do
-    for grid_column = 0, SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS - 1 do
-      local bit = math.floor(
-        2 ^ (grid_row * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS + grid_column)
-      )
-      if font_binary_reader.has_flag(definition.mask, bit) then
-        for subrow_offset = 0, subrows_per_grid_row - 1 do
-          local subrow = grid_row * subrows_per_grid_row + subrow_offset
-          filled_subcells[#filled_subcells + 1] = subrow
-              * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS
-            + grid_column
-            + 1
-        end
+  for subrow = 0, SYMBOL_CELL_GEOMETRY.SUBCELL_ROWS - 1 do
+    local y = (subrow + SUBCELL_CENTRE_OFFSET)
+      / SYMBOL_CELL_GEOMETRY.SUBCELL_ROWS
+    for subcolumn = 0, SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS - 1 do
+      local x = (subcolumn + SUBCELL_CENTRE_OFFSET)
+        / SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS
+      if definition.covers(x, y) then
+        filled_subcells[#filled_subcells + 1] = subrow
+            * SYMBOL_CELL_GEOMETRY.SUBCELL_COLUMNS
+          + subcolumn
+          + 1
       end
     end
   end
-  table.sort(filled_subcells)
   return filled_subcells
 end
 

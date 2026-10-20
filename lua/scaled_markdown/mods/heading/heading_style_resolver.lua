@@ -1,6 +1,8 @@
 local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 local gradient_palette =
   require 'scaled_markdown.core.highlight.gradient_palette'
+local terminal_symbol_support =
+  require 'scaled_markdown.core.terminal.terminal_symbol_support'
 
 ---@alias StyleConfigProps StyleProps
 ---@alias StyleResolverProps fun(renderer_config: StyleConfigProps, level: integer): TextArtStyleProps
@@ -17,7 +19,8 @@ local function resolve_typeface_style(typeface_style_config, level)
 
   return {
     font = typeface_style_config.font,
-    symbols = typeface_style_config.symbols,
+    symbols = typeface_style_config.symbols
+      or terminal_symbol_support.default_symbols(),
     rows = rows,
   }
 end

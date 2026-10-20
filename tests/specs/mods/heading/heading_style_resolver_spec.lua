@@ -49,6 +49,26 @@ spec.describe('heading_style_resolver', function()
     }, 'graphics')
   end)
 
+  spec.it('picks font drawn symbols in macOS Terminal by default', function()
+    local saved_term_program = vim.env.TERM_PROGRAM
+    ---@type table<RendererEnum, StyleProps>
+    local styles_without_symbols = vim.deepcopy(STYLES)
+    styles_without_symbols[RENDERER_ENUM.TYPEFACE].symbols = nil
+    vim.env.TERM_PROGRAM = 'Apple_Terminal'
+    local apple_symbols = heading_style_resolver.resolve(
+      styles_without_symbols,
+      1
+    )[RENDERER_ENUM.TYPEFACE].symbols
+    vim.env.TERM_PROGRAM = 'foot'
+    local foot_symbols = heading_style_resolver.resolve(
+      styles_without_symbols,
+      1
+    )[RENDERER_ENUM.TYPEFACE].symbols
+    vim.env.TERM_PROGRAM = saved_term_program
+    expect.equal(apple_symbols, 'solid+half+quad+eighth', 'apple terminal')
+    expect.equal(foot_symbols, 'octant+solid+half+quad+eighth', 'foot')
+  end)
+
   spec.it('uses the per level values', function()
     local styles = heading_style_resolver.resolve(STYLES, 2)
     expect.equal(styles[RENDERER_ENUM.TYPEFACE].rows, 5, 'typeface rows')

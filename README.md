@@ -140,7 +140,7 @@ mods = {
     line_styles_by_level = { 'pill', 'pill', 'pill', 'pill', 'accent', 'muted' },
     styles = {
       graphics = { font = 'FreeSans:bold', line_height_cells_by_level = { 3, 2, 1.5 } },
-      typeface = { font = 'FreeSans:bold', symbols = 'octant+solid+half+quad', rows_by_level = { 7, 5, 4 } },
+      typeface = { font = 'FreeSans:bold', rows_by_level = { 7, 5, 4 } },
       toilet = { fonts_by_level = { 'mono12', 'mono9', 'smblock' } },
       figlet = { fonts_by_level = { 'big', 'standard', 'small' } },
     },
@@ -158,6 +158,14 @@ mods = {
   thematic_break = { character = '─' },
 }
 ```
+
+`symbols` lists the character classes `typeface` may draw with: `solid`, `half` (or `hhalf`/`vhalf`), `quad`, `block`, `sextant`, `octant`, `braille`, `eighth` and `wedge`. A `-` prefix removes a class. More classes give finer shapes, but only if the terminal can draw them:
+
+- `solid`, `half`, `quad` and `eighth` come from the Block Elements range, which almost every monospace font has, including Menlo and SF Mono on macOS
+- `sextant`, `octant` and `wedge` come from newer Unicode ranges. Terminals such as foot, Kitty, WezTerm and Ghostty draw them on their own, but others depend on the font and may show gaps or fallback glyphs
+- `wedge` adds diagonal edges. It smooths slanted strokes but can leave small spikes, so it is not on by default
+
+When `symbols` is not set, the plugin picks `octant+solid+half+quad+eighth`, or `solid+half+quad+eighth` in macOS Terminal, which draws these characters from the font. If headings show broken or missing pieces in another terminal, set `symbols = 'solid+half+quad+eighth'`. Gaps between rows usually mean the terminal's line spacing is above 1.0.
 
 Available mods: `heading`, `text`, `inline_code`, `link`, `link_reference`, `image`, `list`, `checkbox`, `quote`, `code_block`, `table`, `thematic_break`.
 

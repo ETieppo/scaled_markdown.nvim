@@ -110,12 +110,22 @@ function gradient_palette.define_groups()
       .. FILL_GROUP_SUFFIX
       .. step_index
 
-    vim.api.nvim_set_hl(0, foreground_group, { fg = color, bold = true })
+    local color_index =
+      color_math.nearest_xterm_index(color_math.hex_to_rgb(color))
     vim.api.nvim_set_hl(
       0,
-      fill_group,
-      { fg = fill_foreground, bg = color, bold = true }
+      foreground_group,
+      { fg = color, ctermfg = color_index, bold = true }
     )
+    vim.api.nvim_set_hl(0, fill_group, {
+      fg = fill_foreground,
+      bg = color,
+      ctermfg = color_math.nearest_xterm_index(
+        color_math.hex_to_rgb(fill_foreground)
+      ),
+      ctermbg = color_index,
+      bold = true,
+    })
     group_names_by_variant[GRADIENT_VARIANT_ENUM.FOREGROUND][step_index] =
       foreground_group
     group_names_by_variant[GRADIENT_VARIANT_ENUM.FILL][step_index] = fill_group

@@ -78,12 +78,17 @@ spec.describe('symbol_catalog', function()
     'ignores unknown classes',
     function()
       expect.deep_equal(
-        characters(symbol_catalog.resolve 'wedge'),
+        characters(symbol_catalog.resolve 'unknown'),
         { SPACE },
         'space only'
       )
     end
   )
+
+  spec.it('builds eighth and wedge shapes', function()
+    expect.equal(#symbol_catalog.resolve 'eighth', 17, 'eighths')
+    expect.equal(#symbol_catalog.resolve 'wedge', 45, 'wedges')
+  end)
 
   spec.it('builds sextant and braille shapes', function()
     expect.equal(#symbol_catalog.resolve 'sextant', 64, 'sextants')
