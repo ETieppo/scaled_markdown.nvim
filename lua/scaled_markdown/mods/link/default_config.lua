@@ -1,6 +1,6 @@
 ---@type LinkConfigProps
 local DEFAULT_LINK_CONFIG = {
-  icon = '↗ ',
+  icon = '🔗',
   autolink_icon = '⌁ ',
 }
 

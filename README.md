@@ -147,10 +147,16 @@ mods = {
   },
   list = { bullets = { '●', '○', '◆', '◇' } },
   checkbox = { unchecked_icon = '☐', checked_icon = '■' },
-  quote = { bar = '▌' },
+  quote = {
+    bar = '▌',
+    callouts = {
+      NOTE = { icon = '󰋽 ', title = 'Note', color = 'DiagnosticInfo' },
+      STAR = { icon = '★ ', title = 'Star', color = 'Special' },
+    },
+  },
   code_block = { min_width = 40, horizontal_padding = 1 },
   table = { cell_padding = 1, min_column_width = 3 },
-  link = { icon = '↗ ', autolink_icon = '⌁ ' },
+  link = { icon = '🔗', autolink_icon = '⌁ ' },
   link_reference = { icon = '¶ ' },
   image = { icon = '▣ ' },
   inline_code = { delimiter_replacement = ' ' },
@@ -158,6 +164,8 @@ mods = {
   thematic_break = { character = '─' },
 }
 ```
+
+`quote.callouts` maps each `[!TYPE]` marker (case-insensitive) to its `icon`, `title` and `color`, where `color` is the highlight group used for the title and the bar. GitHub callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) and Obsidian callouts (`ABSTRACT`, `SUMMARY`, `TLDR`, `INFO`, `TODO`, `HINT`, `SUCCESS`, `CHECK`, `DONE`, `QUESTION`, `HELP`, `FAQ`, `ATTENTION`, `FAILURE`, `FAIL`, `MISSING`, `DANGER`, `ERROR`, `BUG`, `EXAMPLE`, `QUOTE`, `CITE`) come built in. Override any field, or add new types with upper-case letter-only keys such as `STAR`.
 
 `symbols` lists the character classes `typeface` may draw with: `solid`, `half` (or `hhalf`/`vhalf`), `quad`, `block`, `sextant`, `octant`, `braille`, `eighth` and `wedge`. A `-` prefix removes a class. More classes give finer shapes, but only if the terminal can draw them:
 

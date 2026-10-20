@@ -7,7 +7,6 @@ local spec = require 'harness.spec'
 
 local MOD_NAME = 'quote'
 local GRADIENT_PATTERN = '^ScaledMarkdownGradient%d+$'
-local NOTE_GROUP = 'ScaledMarkdownQuoteCalloutNote'
 local NOTE_TYPE = 'NOTE'
 ---@type integer[]
 local NESTED_BAR_COLUMNS = { 0, 2 }
@@ -77,14 +76,18 @@ spec.describe('quote render', function()
     ).callouts[NOTE_TYPE]
     expect.deep_equal(
       find_callout_title(buf).details.virt_text,
-      { { callout.icon .. callout.title, NOTE_GROUP } },
+      { { callout.icon .. callout.title, callout.color } },
       'title chunk'
     )
     local marker = extmark_reader.find(buf, extmark_predicates.has_conceal)
     expect.equal(marker.col, CALLOUT_MARKER_START, 'marker start')
     expect.equal(marker.details.end_col, CALLOUT_MARKER_END, 'marker end')
     for row = 0, 1 do
-      expect.equal(first_bar_group(buf, row), NOTE_GROUP, 'callout colored bar')
+      expect.equal(
+        first_bar_group(buf, row),
+        callout.color,
+        'callout colored bar'
+      )
     end
   end)
 

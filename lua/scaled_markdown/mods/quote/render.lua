@@ -1,6 +1,5 @@
 local gradient_palette =
   require 'scaled_markdown.core.highlight.gradient_palette'
-local quote_highlight = require 'scaled_markdown.mods.quote.highlight'
 
 local BLOCK_QUOTE_NODE_TYPE = 'block_quote'
 local QUOTE_MARKER_BYTE = ('>'):byte()
@@ -44,7 +43,6 @@ local function find_callout(first_line, mod_config)
   if not callout_props then return nil end
   return {
     props = callout_props,
-    highlight = quote_highlight.GROUPS.CALLOUT_BY_TYPE[callout_type:upper()],
     start_col = math.floor(tonumber(marker_start) --[[@as number]]) - 1,
     end_col = math.floor(tonumber(marker_end) --[[@as number]]) - 1,
   }
@@ -77,7 +75,7 @@ local function render_callout_title(row, callout, writer)
   })
   writer.set_extmark(row, callout.start_col, {
     virt_text = {
-      { callout.props.icon .. callout.props.title, callout.highlight },
+      { callout.props.icon .. callout.props.title, callout.props.color },
     },
     virt_text_pos = 'inline',
   })
@@ -95,7 +93,7 @@ function quote_render.render(capture_dto, mod_context_dto)
   local callout =
     find_callout(context_dto.line_at(first_row), context_dto.mod_config)
   for row = first_row, last_row do
-    local highlight_group = callout and callout.highlight
+    local highlight_group = callout and callout.props.color
       or gradient_palette.group_for_position(row - first_row, row_count)
     render_bars(
       row,
