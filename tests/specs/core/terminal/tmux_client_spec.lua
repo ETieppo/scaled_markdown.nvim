@@ -5,7 +5,7 @@ local tmux_client = require 'scaled_markdown.core.terminal.tmux_client'
 
 local PANE_ID = '%3'
 local PROBE_OUTPUT =
-  'xterm-ghostty\tghostty 1.2.0\tbpaste,clipboard,RGB,title\t10\t21\toff\n'
+  'xterm-ghostty\tghostty 1.2.0\tbpaste,clipboard,RGB,title\t10\t21\toff\t1\n'
 
 ---@param outputs_by_subcommand table<string, string?>
 ---@return string[][]
@@ -59,6 +59,7 @@ spec.describe('tmux_client', function()
       cell_width = 10,
       cell_height = 21,
       passthrough = 'off',
+      has_sixel_support = true,
     }, 'client props')
   end)
 
@@ -81,7 +82,7 @@ spec.describe('tmux_client', function()
 
   spec.it('treats unknown cell sizes as missing', function()
     stub_tmux {
-      ['display-message'] = 'xterm-kitty\t\tRGB\t0\t0\tall\n',
+      ['display-message'] = 'xterm-kitty\t\tRGB\t0\t0\tall\t\n',
     }
     local client_props = tmux_client.probe()
     ---@cast client_props -nil
@@ -196,7 +197,7 @@ spec.describe('tmux_client', function()
 
   spec.it('accepts passthrough the user already turned on', function()
     stub_tmux {
-      ['display-message'] = PROBE_OUTPUT:gsub('\toff\n', '\ton\n'),
+      ['display-message'] = PROBE_OUTPUT:gsub('\toff\t', '\ton\t'),
     }
     expect.truthy(tmux_client.ensure_passthrough(false), 'on is enough')
   end)

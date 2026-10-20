@@ -13,6 +13,7 @@ local MINIMUM_KITTY_PLACEHOLDER_VERSION = { 0, 28, 0 }
 local KITTY_NAME = 'kitty'
 local VERSION_NUMBER_PATTERN = '%d+'
 local TRUE_COLOR_FEATURE = 'RGB'
+local SIXEL_FEATURE = 'sixel'
 local NO_TRUE_COLOR_REASON = 'termguicolors is off'
 local NO_UI_REASON = 'no UI is attached'
 local DISABLED_REASON = 'terminal.graphics_protocol is none'
@@ -21,7 +22,9 @@ local UNKNOWN_TERMINAL_REASON =
 local OLD_KITTY_REASON = 'kitty %s is older than 0.28 (no unicode placeholders)'
 local TMUX_UNREACHABLE_REASON = 'tmux client could not be queried'
 local TMUX_UNKNOWN_CLIENT_REASON =
-  'tmux client terminal has no kitty unicode placeholders (%s); sixel is not used inside tmux'
+  'tmux client terminal (%s) has neither kitty unicode placeholders nor sixel'
+local TMUX_NO_SIXEL_SUPPORT_REASON =
+  'tmux client terminal (%s) has sixel but tmux was built without sixel support'
 local TMUX_NO_RGB_REASON =
   "tmux client has no RGB feature; add it with terminal-features (e.g. set -as terminal-features ',xterm*:RGB')"
 local TMUX_NO_PASSTHROUGH_REASON =
@@ -82,18 +85,18 @@ local function build_capability(
   }
 end
 
----@return string?
-local function find_tmux_unsupported_reason()
-  local client_props = tmux_client.probe()
-  if not client_props then return TMUX_UNREACHABLE_REASON end
-  if
-    not matches_placeholder_terminal(client_props.term_name)
-    and not matches_placeholder_terminal(client_props.term_type)
-  then
-    return TMUX_UNKNOWN_CLIENT_REASON:format(client_props.term_name)
-  end
+---@param client_props TmuxClientProps
+---@return boolean
+local function is_placeholder_client(client_props)
+  return matches_placeholder_terminal(client_props.term_name)
+    or matches_placeholder_terminal(client_props.term_type)
+end
+
+---@param client_props TmuxClientProps
+---@return GraphicsProtocolEnum, string?
+local function detect_tmux_placeholder_protocol(client_props)
   if not client_props.features[TRUE_COLOR_FEATURE] then
-    return TMUX_NO_RGB_REASON
+    return GRAPHICS_PROTOCOL_ENUM.NONE, TMUX_NO_RGB_REASON
   end
   local terminal_config = config_store.get().terminal --[[@as TerminalProps]]
   if
@@ -101,9 +104,32 @@ local function find_tmux_unsupported_reason()
       terminal_config.allow_tmux_passthrough == true
     )
   then
-    return TMUX_NO_PASSTHROUGH_REASON
+    return GRAPHICS_PROTOCOL_ENUM.NONE, TMUX_NO_PASSTHROUGH_REASON
   end
-  return nil
+  return GRAPHICS_PROTOCOL_ENUM.KITTY_PLACEHOLDER
+end
+
+---@return GraphicsProtocolEnum, string?
+local function detect_tmux_protocol()
+  local client_props = tmux_client.probe()
+  if not client_props then
+    return GRAPHICS_PROTOCOL_ENUM.NONE, TMUX_UNREACHABLE_REASON
+  end
+  if is_placeholder_client(client_props) then
+    return detect_tmux_placeholder_protocol(client_props)
+  end
+  if not client_props.features[SIXEL_FEATURE] then
+    return GRAPHICS_PROTOCOL_ENUM.NONE,
+      TMUX_UNKNOWN_CLIENT_REASON:format(client_props.term_name)
+  end
+  if
+    not client_props.has_sixel_support
+    and not terminal_query.identity().has_sixel
+  then
+    return GRAPHICS_PROTOCOL_ENUM.NONE,
+      TMUX_NO_SIXEL_SUPPORT_REASON:format(client_props.term_name)
+  end
+  return GRAPHICS_PROTOCOL_ENUM.SIXEL
 end
 
 ---@return GraphicsProtocolEnum, string?
@@ -130,16 +156,12 @@ end
 ---@param is_inside_tmux boolean
 ---@return TerminalCapabilityProps
 local function detect_automatically(is_inside_tmux)
+  local protocol, unsupported_reason
   if is_inside_tmux then
-    local unsupported_reason = find_tmux_unsupported_reason()
-    return build_capability(
-      unsupported_reason and GRAPHICS_PROTOCOL_ENUM.NONE
-        or GRAPHICS_PROTOCOL_ENUM.KITTY_PLACEHOLDER,
-      is_inside_tmux,
-      unsupported_reason
-    )
+    protocol, unsupported_reason = detect_tmux_protocol()
+  else
+    protocol, unsupported_reason = detect_direct_protocol()
   end
-  local protocol, unsupported_reason = detect_direct_protocol()
   return build_capability(protocol, is_inside_tmux, unsupported_reason)
 end
 

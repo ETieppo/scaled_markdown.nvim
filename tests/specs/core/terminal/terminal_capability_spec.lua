@@ -37,6 +37,15 @@ local GHOSTTY_CLIENT = {
   term_type = '',
   features = { RGB = true },
   passthrough = 'off',
+  has_sixel_support = false,
+}
+---@type TmuxClientProps
+local FOOT_CLIENT = {
+  term_name = 'foot',
+  term_type = 'foot(1.28.0)',
+  features = { RGB = true, sixel = true },
+  passthrough = 'off',
+  has_sixel_support = true,
 }
 local SIXEL_ATTRIBUTES_RESPONSE = '\27[?62;4;22c'
 local PLAIN_ATTRIBUTES_RESPONSE = '\27[?62;22c'
@@ -166,16 +175,36 @@ spec.describe('terminal_capability', function()
     expect.deep_equal(passthrough_requests, { true }, 'passthrough enabled')
   end)
 
-  spec.it('rejects tmux clients from wezterm and unknown terminals', function()
+  spec.it('uses tmux sixel for clients with the sixel feature', function()
+    set_environment(TMUX_ENVIRONMENT)
+    local passthrough_requests = stub_tmux_client(FOOT_CLIENT)
+    expect.equal(terminal_capability.protocol(), SIXEL, 'tmux sixel')
+    expect.deep_equal(passthrough_requests, {}, 'passthrough untouched')
+  end)
+
+  spec.it('falls back to the tmux sixel attribute on older tmux', function()
+    set_environment(TMUX_ENVIRONMENT)
+    stub_tmux_client(vim.tbl_extend('force', FOOT_CLIENT, {
+      has_sixel_support = false,
+    }))
+    local capability = terminal_capability.detect()
+    expect.equal(capability.protocol, NONE, 'unknown tmux build')
+    expect.matches(capability.unsupported_reason, 'built without', 'reason')
+    terminal_query.handle_response(SIXEL_ATTRIBUTES_RESPONSE)
+    expect.equal(terminal_capability.protocol(), SIXEL, 'tmux reports sixel')
+  end)
+
+  spec.it('rejects tmux clients without placeholders or sixel', function()
     set_environment(TMUX_ENVIRONMENT)
     stub_tmux_client {
       term_name = 'xterm-256color',
       term_type = 'WezTerm 20240203',
       features = { RGB = true },
       passthrough = 'all',
+      has_sixel_support = true,
     }
     terminal_query.handle_response(SIXEL_ATTRIBUTES_RESPONSE)
-    expect.equal(terminal_capability.protocol(), NONE, 'no sixel in tmux')
+    expect.equal(terminal_capability.protocol(), NONE, 'no client sixel')
   end)
 
   spec.it('rejects tmux clients without true color', function()
@@ -185,6 +214,7 @@ spec.describe('terminal_capability', function()
       term_type = '',
       features = {},
       passthrough = 'all',
+      has_sixel_support = false,
     }
     local capability = terminal_capability.detect()
     expect.equal(capability.protocol, NONE, 'no RGB')

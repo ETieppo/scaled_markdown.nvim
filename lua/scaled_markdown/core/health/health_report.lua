@@ -4,6 +4,7 @@ local RENDERER_ENUM = require 'scaled_markdown.core.enums.renderer_enum'
 local config_store = require 'scaled_markdown.core.config.config_store'
 local graphics_renderer =
   require 'scaled_markdown.core.text_art.graphics_renderer'
+local neovim_version = require 'scaled_markdown.core.setup.neovim_version'
 local terminal_capability =
   require 'scaled_markdown.core.terminal.terminal_capability'
 local terminal_cell_size =
@@ -33,6 +34,17 @@ local RENDERER_REPORT_ORDER = {
 ---@class health_report
 local health_report = {}
 
+local function report_neovim_version()
+  local requirement = ('neovim %s or newer'):format(
+    neovim_version.MINIMUM_VERSION_TEXT
+  )
+  if neovim_version.is_supported() then
+    vim.health.ok(requirement)
+  else
+    vim.health.error(requirement .. ' is required')
+  end
+end
+
 local function report_parsers()
   for _, parser_name in ipairs(REQUIRED_PARSERS) do
     if vim.treesitter.language.add(parser_name) then
@@ -58,14 +70,12 @@ end
 
 local function report_terminal()
   local capability = terminal_capability.detect()
-  if capability.is_inside_tmux then
-    vim.health.info 'running inside tmux: graphics use passthrough'
-  end
+  if capability.is_inside_tmux then vim.health.info 'running inside tmux' end
   if capability.protocol ~= GRAPHICS_PROTOCOL_ENUM.NONE then
     vim.health.ok(('graphics protocol: %s'):format(capability.protocol))
   else
     vim.health.warn(
-      ('kitty graphics unavailable: %s'):format(capability.unsupported_reason)
+      ('graphics unavailable: %s'):format(capability.unsupported_reason)
     )
   end
   local measured_size = terminal_cell_size.measure()
@@ -89,6 +99,7 @@ end
 
 function health_report.run()
   vim.health.start 'scaled_markdown'
+  report_neovim_version()
   report_parsers()
   report_renderers()
   report_terminal()

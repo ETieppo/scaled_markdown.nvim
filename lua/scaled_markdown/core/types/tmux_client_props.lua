@@ -7,3 +7,4 @@
 ---@field cell_width? integer
 ---@field cell_height? integer
 ---@field passthrough string
+---@field has_sixel_support boolean

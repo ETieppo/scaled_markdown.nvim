@@ -17,7 +17,9 @@ local PROBE_FIELDS = {
   '#{client_cell_width}',
   '#{client_cell_height}',
   '#{' .. PASSTHROUGH_OPTION .. '}',
+  '#{sixel_support}',
 }
+local ENABLED_FORMAT_VALUE = '1'
 local UNPROBED = nil
 local PROBE_FAILED = false
 
@@ -86,6 +88,7 @@ local function parse_probe(output)
     cell_width = parse_positive_integer(fields[4]),
     cell_height = parse_positive_integer(fields[5]),
     passthrough = fields[6],
+    has_sixel_support = fields[7] == ENABLED_FORMAT_VALUE,
   }
 end
 

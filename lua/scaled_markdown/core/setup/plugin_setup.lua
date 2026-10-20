@@ -4,6 +4,7 @@ local buffer_attachment =
 local config_store = require 'scaled_markdown.core.config.config_store'
 local highlight_setup = require 'scaled_markdown.core.setup.highlight_setup'
 local mod_registry = require 'scaled_markdown.core.registry.mod_registry'
+local neovim_version = require 'scaled_markdown.core.setup.neovim_version'
 local positioned_image_painter =
   require 'scaled_markdown.core.render.positioned_image_painter'
 local terminal_capability =
@@ -13,6 +14,9 @@ local tmux_client = require 'scaled_markdown.core.terminal.tmux_client'
 local text_art_service =
   require 'scaled_markdown.core.text_art.text_art_service'
 local user_command = require 'scaled_markdown.core.command.user_command'
+
+local UNSUPPORTED_NEOVIM_MESSAGE =
+  'scaled_markdown.nvim requires neovim %s or newer'
 
 ---@class plugin_setup
 local plugin_setup = {}
@@ -46,6 +50,13 @@ end
 ---@param user_config? ConfigProps
 ---@param mod_props_list ModProps[]
 function plugin_setup.run(user_config, mod_props_list)
+  if not neovim_version.is_supported() then
+    vim.notify(
+      UNSUPPORTED_NEOVIM_MESSAGE:format(neovim_version.MINIMUM_VERSION_TEXT),
+      vim.log.levels.ERROR
+    )
+    return
+  end
   tmux_client.reset()
   positioned_image_painter.reset()
   mod_registry.register_all(mod_props_list)
