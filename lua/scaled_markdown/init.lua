@@ -12,6 +12,7 @@ local MOD_PROPS_LIST = {
   require 'scaled_markdown.mods.heading',
   require 'scaled_markdown.mods.text',
   require 'scaled_markdown.mods.inline_code',
+  require 'scaled_markdown.mods.latex',
   require 'scaled_markdown.mods.link',
   require 'scaled_markdown.mods.link_reference',
   require 'scaled_markdown.mods.image',

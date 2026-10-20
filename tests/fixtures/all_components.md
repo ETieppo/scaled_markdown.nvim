@@ -19,7 +19,7 @@ Setext Heading
 Second Setext Heading
 ---------------------
 
-Plain paragraph with **strong text**, *emphasis*, ~~strikethrough~~ and `inline code`.
+Plain paragraph with **strong text**, *emphasis*, ~~strikethrough~~, `inline code` and $e^{i\pi} + 1 = 0$.
 
 A [labeled link](https://neovim.io) and an autolink <https://example.com>.
 

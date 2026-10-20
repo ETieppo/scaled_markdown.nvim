@@ -1,0 +1,20 @@
+---@meta
+
+---@class LatexNodeProps
+---@field kind LatexNodeKindEnum
+---@field text? string
+---@field children? LatexNodeProps[]
+---@field numerator? LatexNodeProps
+---@field denominator? LatexNodeProps
+---@field base? LatexNodeProps
+---@field superscript? LatexNodeProps
+---@field subscript? LatexNodeProps
+---@field is_subscript_first? boolean
+---@field index? LatexNodeProps
+---@field radicand? LatexNodeProps
+---@field accent_mark? string
+---@field body? LatexNodeProps
+---@field left_delimiter? string
+---@field right_delimiter? string
+---@field rows? LatexNodeProps[][]
+---@field environment? LatexEnvironmentProps

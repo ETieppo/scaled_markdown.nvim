@@ -11,7 +11,7 @@ Most markdown plugins can only change colors and add icons, because a terminal c
 - **Scaled headings** with a per-level size, a theme-aware color gradient, icons and pill-shaped line styles
 - **Five renderers**, with automatic fallback when one is not available
 - **Pure Lua font engine** that reads TrueType and CFF/OpenType fonts, rasterizes glyphs and maps them to Unicode symbols, with no `magick`, `chafa` or `fc-match` needed
-- **Full set of markdown elements**: text emphasis, inline code, links, link references, images, lists, checkboxes, block quotes with GitHub callouts, code blocks, tables and thematic breaks
+- **Full set of markdown elements**: text emphasis, inline code, links, link references, images, lists, checkboxes, block quotes with GitHub callouts, code blocks, tables, thematic breaks and LaTeX math
 - **Reveal on cursor**: the raw markdown comes back on the cursor line and in visual selections
 - **Viewport rendering** with debounced updates, so large files stay fast
 - **Modular design**: each markdown element is its own mod and can be configured or turned off on its own
@@ -160,12 +160,21 @@ mods = {
   link_reference = { icon = '¶ ' },
   image = { icon = '▣ ' },
   inline_code = { delimiter_replacement = ' ' },
+  latex = {
+    center_display_math = false,
+    highlight_symbols = true,
+    command_symbols = { R = 'ℝ' },
+  },
   text = { conceal_delimiters = true },
   thematic_break = { character = '─' },
 }
 ```
 
 `quote.callouts` maps each `[!TYPE]` marker (case-insensitive) to its `icon`, `title` and `color`, where `color` is the highlight group used for the title and the bar. GitHub callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) and Obsidian callouts (`ABSTRACT`, `SUMMARY`, `TLDR`, `INFO`, `TODO`, `HINT`, `SUCCESS`, `CHECK`, `DONE`, `QUESTION`, `HELP`, `FAQ`, `ATTENTION`, `FAILURE`, `FAIL`, `MISSING`, `DANGER`, `ERROR`, `BUG`, `EXAMPLE`, `QUOTE`, `CITE`) come built in. Override any field, or add new types with upper-case letter-only keys such as `STAR`.
+
+`latex` renders math in pure Lua, with no LaTeX install. Display math (`$$…$$` on its own lines) is laid out in two dimensions like TeX: fractions are stacked over a rule, `\lim`/`\sum`/`\prod` take their limits above and below, `\left(`…`\right)` delimiters grow with their content, roots get a bar, and `pmatrix`, `bmatrix`, `cases`, `aligned` and friends are aligned by column. The baseline sits on the source row, and lines that do not fit in the block's rows continue above or below it. Inline math (`$…$`) on a line of its own is laid out the same way. Inside a sentence it stays on one line, as in TeX's text style: `\frac{a}{b}` becomes `a/b`, roots get a combining overline (`√x̅+̅1̅`), and scripts without a Unicode form fall back to `x^(…)`. `command_symbols` maps command names (without the backslash) to their output, so you can override built-ins or add your own. Display math starts at the left; set `center_display_math = true` to center it.
+
+With `highlight_symbols`, each kind of symbol gets its own highlight group, linked to a standard treesitter group so it follows your colorscheme: `ScaledMarkdownLatexNumber` (`@number`), `ScaledMarkdownLatexOperator` (`@operator`), `ScaledMarkdownLatexRelation` (`@keyword.operator`), `ScaledMarkdownLatexGreek` (`@variable.builtin`), `ScaledMarkdownLatexSymbol` (`@constant.builtin`), `ScaledMarkdownLatexLargeOperator` (`@keyword`), `ScaledMarkdownLatexFunction` (`@function.builtin`) and `ScaledMarkdownLatexDelimiter` (`@punctuation.bracket`). Everything else uses `ScaledMarkdownLatex` (`@markup.math`). Override any of them with `vim.api.nvim_set_hl`, or set `highlight_symbols = false` to draw the whole formula in one color.
 
 `symbols` lists the character classes `typeface` may draw with: `solid`, `half` (or `hhalf`/`vhalf`), `quad`, `block`, `sextant`, `octant`, `braille`, `eighth` and `wedge`. A `-` prefix removes a class. More classes give finer shapes, but only if the terminal can draw them:
 
@@ -175,7 +184,7 @@ mods = {
 
 When `symbols` is not set, the plugin picks `octant+solid+half+quad+eighth`, or `solid+half+quad+eighth` in macOS Terminal, which draws these characters from the font. If headings show broken or missing pieces in another terminal, set `symbols = 'solid+half+quad+eighth'`. Gaps between rows usually mean the terminal's line spacing is above 1.0.
 
-Available mods: `heading`, `text`, `inline_code`, `link`, `link_reference`, `image`, `list`, `checkbox`, `quote`, `code_block`, `table`, `thematic_break`.
+Available mods: `heading`, `text`, `inline_code`, `latex`, `link`, `link_reference`, `image`, `list`, `checkbox`, `quote`, `code_block`, `table`, `thematic_break`.
 
 ## Usage
 

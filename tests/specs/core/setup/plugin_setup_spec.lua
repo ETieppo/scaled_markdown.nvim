@@ -15,6 +15,7 @@ local EXPECTED_MOD_NAMES = {
   'heading',
   'text',
   'inline_code',
+  'latex',
   'link',
   'link_reference',
   'image',
