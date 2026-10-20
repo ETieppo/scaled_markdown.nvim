@@ -7,6 +7,9 @@ local spec = require 'harness.spec'
 local utf8_text = require 'scaled_markdown.core.text.utf8_text'
 
 local MOD_NAME = 'code_block'
+local QUOTE_MOD_NAME = 'quote'
+---@type string[]
+local QUOTED_FENCED_LINES = { '> ```lua', '> local a = 1', '> ```' }
 ---@type string[]
 local FENCED_LINES = { '```lua', 'local a = 1', '```' }
 ---@type string[]
@@ -17,13 +20,17 @@ local HUGE_CONTENT_WIDTH = 500
 local BORDERS_AND_PADDING_WIDTH = 4
 local CONTENT_ROW = 1
 local VERTICAL_BORDER = '│'
+local LUA_ICON = '\u{E620} '
+local DEFAULT_ICON = '\u{F121} '
 
 ---@param lines string[]
+---@param extra_config? table<string, any>
 ---@return integer
-local function render(lines)
-  ---@type CodeBlockConfigProps
-  local mod_config = { min_width = MIN_WIDTH }
-  plugin_session.start_with_only(MOD_NAME, mod_config)
+local function render(lines, extra_config)
+  plugin_session.start_with_only(
+    MOD_NAME,
+    vim.tbl_extend('force', { min_width = MIN_WIDTH }, extra_config or {})
+  )
   local buf = buffer_factory.from_lines(lines)
   plugin_session.render(buf)
   return buf
@@ -38,25 +45,94 @@ local function overlay_text_on_row(buf, row)
 end
 
 ---@param buf integer
----@param row integer
+---@param predicate ExtmarkPredicateProps
+---@return string
+local function virtual_border_text(buf, predicate)
+  local entry = extmark_reader.find(buf, predicate)
+  return vim.trim(extmark_reader.virt_line_string(entry.details.virt_lines[1]))
+end
+
+---@param buf integer
+---@return string
+local function top_border_text(buf)
+  return virtual_border_text(buf, extmark_predicates.virt_lines_above)
+end
+
+---@param buf integer
+---@return string
+local function bottom_border_text(buf)
+  return virtual_border_text(buf, extmark_predicates.virt_lines_below)
+end
+
+---@param border_text string
 ---@return integer
-local function box_width_on_row(buf, row)
-  return utf8_text.display_width(vim.trim(overlay_text_on_row(buf, row)))
+local function border_width(border_text)
+  return utf8_text.display_width(border_text)
 end
 
 spec.describe('code_block render', function()
   spec.it('turns the fences into a titled top and a bottom border', function()
     local buf = render(FENCED_LINES)
     expect.truthy(
-      vim.startswith(overlay_text_on_row(buf, 0), '╭─ lua '),
+      vim.startswith(top_border_text(buf), '╭─ ' .. LUA_ICON .. 'lua '),
       'top'
     )
-    expect.truthy(
-      vim.startswith(overlay_text_on_row(buf, 2), '╰─'),
-      'bottom'
+    expect.truthy(vim.startswith(bottom_border_text(buf), '╰─'), 'bottom')
+    expect.equal(border_width(top_border_text(buf)), MIN_WIDTH, 'top width')
+    expect.equal(
+      border_width(bottom_border_text(buf)),
+      MIN_WIDTH,
+      'bottom width'
     )
-    expect.equal(box_width_on_row(buf, 0), MIN_WIDTH, 'top width')
-    expect.equal(box_width_on_row(buf, 2), MIN_WIDTH, 'bottom width')
+  end)
+
+  spec.it('hides both fences so the borders replace them', function()
+    local buf = render(FENCED_LINES)
+    local hidden_rows = vim.tbl_map(
+      ---@param entry ExtmarkEntryProps
+      ---@return integer
+      function(entry) return entry.row end,
+      extmark_reader.find_all(
+        buf,
+        ---@param details vim.api.keyset.set_extmark
+        ---@return boolean
+        function(details) return details.conceal_lines ~= nil end
+      )
+    )
+    expect.deep_equal(hidden_rows, { 0, 2 }, 'fence rows')
+    local top = extmark_reader.find(buf, extmark_predicates.virt_lines_above)
+    local bottom = extmark_reader.find(buf, extmark_predicates.virt_lines_below)
+    expect.equal(top.row, CONTENT_ROW, 'top border above content')
+    expect.equal(bottom.row, CONTENT_ROW, 'bottom border below content')
+  end)
+
+  spec.it('shows the default icon for unknown languages', function()
+    local buf = render { '```brainfuck', '+', '```' }
+    expect.truthy(
+      vim.startswith(
+        top_border_text(buf),
+        '╭─ ' .. DEFAULT_ICON .. 'brainfuck '
+      ),
+      'default icon'
+    )
+  end)
+
+  spec.it('matches language icons case-insensitively', function()
+    local buf = render { '```Python', 'pass', '```' }
+    expect.matches(top_border_text(buf), '\u{E606} Python', 'icon')
+  end)
+
+  spec.it('uses configured language icons', function()
+    local buf = render(FENCED_LINES, { language_icons = { lua = '☾ ' } })
+    expect.truthy(
+      vim.startswith(top_border_text(buf), '╭─ ☾ lua '),
+      'custom icon'
+    )
+  end)
+
+  spec.it('keeps blocks without a language untitled', function()
+    local buf = render { '```', 'plain', '```' }
+    expect.truthy(vim.startswith(top_border_text(buf), '╭──'), 'no title')
   end)
 
   spec.it('adds side borders to every content row', function()
@@ -81,7 +157,7 @@ spec.describe('code_block render', function()
   spec.it('grows the box to fit the widest content line', function()
     local long_line = string.rep('x', MIN_WIDTH + EXTRA_CONTENT_WIDTH)
     expect.equal(
-      box_width_on_row(render { '```', long_line, '```' }, 0),
+      border_width(top_border_text(render { '```', long_line, '```' })),
       #long_line + BORDERS_AND_PADDING_WIDTH,
       'content plus borders'
     )
@@ -90,7 +166,7 @@ spec.describe('code_block render', function()
   spec.it('never exceeds the window text area', function()
     local buf = render { '```', string.rep('x', HUGE_CONTENT_WIDTH), '```' }
     expect.truthy(
-      box_width_on_row(buf, 0) <= vim.api.nvim_win_get_width(0),
+      border_width(top_border_text(buf)) <= vim.api.nvim_win_get_width(0),
       'clamped to window'
     )
   end)
@@ -111,6 +187,40 @@ spec.describe('code_block render', function()
       '╰',
       'bottom'
     )
+  end)
+
+  spec.it('continues the quote bar on borders inside quotes', function()
+    plugin_session.start()
+    ---@type table<string, ModConfigProps>
+    local mods_config = {}
+    for _, name in ipairs(plugin_session.mod_names()) do
+      mods_config[name] = {
+        enabled = name == MOD_NAME or name == QUOTE_MOD_NAME,
+      }
+    end
+    plugin_session.start {
+      renderer = 'plain',
+      reveal = { cursor_line = false, visual_selection = false },
+      mods = mods_config,
+    }
+    local buf = buffer_factory.from_lines(QUOTED_FENCED_LINES)
+    plugin_session.render(buf)
+    local bar = (
+      plugin_session.mod_config(QUOTE_MOD_NAME) --[[@as QuoteConfigProps]]
+    ).bar
+    for _, predicate in ipairs {
+      extmark_predicates.virt_lines_above,
+      extmark_predicates.virt_lines_below,
+    } do
+      local border = extmark_reader.find(buf, predicate)
+      expect.truthy(
+        vim.startswith(
+          extmark_reader.virt_line_string(border.details.virt_lines[1]),
+          bar .. ' '
+        ),
+        'bar before border'
+      )
+    end
   end)
 
   spec.it('renders empty fenced blocks without errors', function()

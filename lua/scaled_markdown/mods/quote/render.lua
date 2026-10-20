@@ -1,8 +1,11 @@
+local CORE_CONSTANTS = require 'scaled_markdown.core.constants'
+local LANGUAGE_ENUM = require 'scaled_markdown.core.enums.language_enum'
 local gradient_palette =
   require 'scaled_markdown.core.highlight.gradient_palette'
 
 local BLOCK_QUOTE_NODE_TYPE = 'block_quote'
-local QUOTE_MARKER_BYTE = ('>'):byte()
+local QUOTE_MARKER = '>'
+local QUOTE_MARKER_BYTE = QUOTE_MARKER:byte()
 local QUOTE_PREFIX_PATTERN = '^[%s>]*'
 local CALLOUT_MARKER_PATTERN = '()%[!(%a+)%]()'
 
@@ -79,6 +82,60 @@ local function render_callout_title(row, callout, writer)
     },
     virt_text_pos = 'inline',
   })
+end
+
+---@param buf integer
+---@param row integer
+---@param col integer
+---@return TSNode?
+local function find_outermost_quote(buf, row, col)
+  local ok, parser =
+    pcall(vim.treesitter.get_parser, buf, LANGUAGE_ENUM.MARKDOWN)
+  if not ok or not parser then return nil end
+  local tree = parser:trees()[1]
+  if not tree then return nil end
+  local node = tree:root():named_descendant_for_range(row, col, row, col)
+  ---@type TSNode?
+  local outermost_quote
+  while node do
+    if node:type() == BLOCK_QUOTE_NODE_TYPE then outermost_quote = node end
+    node = node:parent()
+  end
+  return outermost_quote
+end
+
+---@param row integer
+---@param prefix_col integer
+---@param mod_context_dto RenderContextProps<ModConfigProps>
+---@return [string, string][]?
+function quote_render.decorate_line_prefix(row, prefix_col, mod_context_dto)
+  ---@type QuoteContextProps
+  local context_dto = mod_context_dto
+  local line = context_dto.line_at(row)
+  local prefix = line:match(QUOTE_PREFIX_PATTERN):sub(1, prefix_col)
+  local first_marker_col = prefix:find(QUOTE_MARKER, 1, true)
+  if not first_marker_col then return nil end
+  local quote_node =
+    find_outermost_quote(context_dto.buf, row, first_marker_col - 1)
+  if not quote_node then return nil end
+  local first_row = quote_node:start()
+  local _, _, end_row, end_col = quote_node:range()
+  local last_row = end_col == 0 and end_row - 1 or end_row
+  local callout =
+    find_callout(context_dto.line_at(first_row), context_dto.mod_config)
+  local highlight_group = callout and callout.props.color
+    or gradient_palette.group_for_position(
+      row - first_row,
+      last_row - first_row + 1
+    )
+  ---@type [string, string][]
+  local chunks = {}
+  for byte_index = 1, #prefix do
+    chunks[#chunks + 1] = prefix:byte(byte_index) == QUOTE_MARKER_BYTE
+        and { context_dto.mod_config.bar, highlight_group }
+      or { ' ', CORE_CONSTANTS.PADDING_HIGHLIGHT }
+  end
+  return chunks
 end
 
 ---@param capture_dto CaptureProps

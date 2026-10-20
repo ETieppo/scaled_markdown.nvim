@@ -154,7 +154,12 @@ mods = {
       STAR = { icon = '★ ', title = 'Star', color = 'Special' },
     },
   },
-  code_block = { min_width = 40, horizontal_padding = 1 },
+  code_block = {
+    min_width = 40,
+    horizontal_padding = 1,
+    language_icons = { lua = ' ', python = ' ' },
+    default_language_icon = ' ',
+  },
   table = { cell_padding = 1, min_column_width = 3 },
   link = { icon = '🔗', autolink_icon = '⌁ ' },
   link_reference = { icon = '¶ ' },
@@ -171,6 +176,8 @@ mods = {
 ```
 
 `quote.callouts` maps each `[!TYPE]` marker (case-insensitive) to its `icon`, `title` and `color`, where `color` is the highlight group used for the title and the bar. GitHub callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) and Obsidian callouts (`ABSTRACT`, `SUMMARY`, `TLDR`, `INFO`, `TODO`, `HINT`, `SUCCESS`, `CHECK`, `DONE`, `QUESTION`, `HELP`, `FAQ`, `ATTENTION`, `FAILURE`, `FAIL`, `MISSING`, `DANGER`, `ERROR`, `BUG`, `EXAMPLE`, `QUOTE`, `CITE`) come built in. Override any field, or add new types with upper-case letter-only keys such as `STAR`.
+
+`code_block` shows the language's icon before its name in the top border. `language_icons` maps a language (case-insensitive, aliases like `py` or `sh` included) to its icon and is merged with the built-in Nerd Font table, so you only list what you want to change. Languages without an entry use `default_language_icon`. Icons need a Nerd Font.
 
 `latex` renders math in pure Lua, with no LaTeX install. Display math (`$$…$$` on its own lines) is laid out in two dimensions like TeX: fractions are stacked over a rule, `\lim`/`\sum`/`\prod` take their limits above and below, `\left(`…`\right)` delimiters grow with their content, roots get a bar, and `pmatrix`, `bmatrix`, `cases`, `aligned` and friends are aligned by column. The baseline sits on the source row, and lines that do not fit in the block's rows continue above or below it. Inline math (`$…$`) on a line of its own is laid out the same way. Inside a sentence it stays on one line, as in TeX's text style: `\frac{a}{b}` becomes `a/b`, roots get a combining overline (`√x̅+̅1̅`), and scripts without a Unicode form fall back to `x^(…)`. `command_symbols` maps command names (without the backslash) to their output, so you can override built-ins or add your own. Display math starts at the left; set `center_display_math = true` to center it.
 

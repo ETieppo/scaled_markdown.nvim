@@ -16,6 +16,7 @@ function render_context_builder.build(buf, win, writer)
     line_at = function(row)
       return vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ''
     end,
+    decorate_line_prefix = function() return {} end,
   }
 end
 
@@ -32,6 +33,7 @@ function render_context_builder.with_mod_config(
     writer = base_context_dto.writer,
     text_area_width = base_context_dto.text_area_width,
     line_at = base_context_dto.line_at,
+    decorate_line_prefix = base_context_dto.decorate_line_prefix,
     mod_config = mod_config,
   }
 end

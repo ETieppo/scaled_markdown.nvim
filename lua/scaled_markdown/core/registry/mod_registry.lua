@@ -36,6 +36,12 @@ local function validate_mod_props(mod_props)
     { 'table', 'function' },
     true
   )
+  vim.validate(
+    'mod_props.decorate_line_prefix',
+    mod_props.decorate_line_prefix,
+    'function',
+    true
+  )
 end
 
 ---@param mod_props ModProps

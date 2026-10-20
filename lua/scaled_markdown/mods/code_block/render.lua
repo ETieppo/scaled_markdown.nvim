@@ -28,6 +28,16 @@ local function measure_content_width(code_block_dto, context_dto)
   return widest
 end
 
+---@param language string?
+---@param mod_config CodeBlockConfigProps
+---@return string?
+local function build_title(language, mod_config)
+  if not language or language == '' then return nil end
+  local icon = mod_config.language_icons[language:lower()]
+    or mod_config.default_language_icon
+  return icon .. language
+end
+
 ---@param code_block_dto CodeBlockProps
 ---@param context_dto CodeBlockContextProps
 ---@return integer
@@ -37,8 +47,9 @@ local function resolve_box_width(code_block_dto, context_dto)
   local padded_width = content_width
     + BORDER_COLUMN_COUNT
     + mod_config.horizontal_padding * 2
-  local title_width = utf8_text.display_width(code_block_dto.language or '')
-    + TITLE_DECORATION_WIDTH
+  local title_width = utf8_text.display_width(
+    build_title(code_block_dto.language, mod_config) or ''
+  ) + TITLE_DECORATION_WIDTH
   local available_width = context_dto.text_area_width - code_block_dto.left_col
 
   return math.min(
@@ -103,22 +114,23 @@ local function render_side_borders(
 end
 
 ---@param row integer
+---@param prefix_row integer
 ---@param border_text string
 ---@param is_above boolean
 ---@param code_block_dto CodeBlockProps
 ---@param context_dto CodeBlockContextProps
 local function attach_virtual_border(
   row,
+  prefix_row,
   border_text,
   is_above,
   code_block_dto,
   context_dto
 )
-  local chunks = gradient_chunks.from_text(border_text)
-  table.insert(chunks, 1, {
-    string.rep(' ', code_block_dto.left_col),
-    CORE_CONSTANTS.PADDING_HIGHLIGHT,
-  })
+  local chunks = vim.list_extend(
+    context_dto.decorate_line_prefix(prefix_row, code_block_dto.left_col),
+    gradient_chunks.from_text(border_text)
+  )
 
   context_dto.writer.set_extmark(row, 0, {
     virt_lines = { chunks },
@@ -126,51 +138,73 @@ local function attach_virtual_border(
   })
 end
 
+---@param code_block_dto CodeBlockProps
+---@return boolean
+local function has_content_rows(code_block_dto)
+  return code_block_dto.first_content_row <= code_block_dto.last_content_row
+end
+
+---@param fence_row integer?
+---@param border_text string
+---@param anchor_row integer
+---@param is_above boolean
+---@param code_block_dto CodeBlockProps
+---@param context_dto CodeBlockContextProps
+local function render_border(
+  fence_row,
+  border_text,
+  anchor_row,
+  is_above,
+  code_block_dto,
+  context_dto
+)
+  if fence_row and not has_content_rows(code_block_dto) then
+    overlay_border(fence_row, border_text, code_block_dto, context_dto)
+    return
+  end
+  if fence_row then
+    if context_dto.writer.is_revealed(fence_row) then return end
+    context_dto.writer.set_extmark(fence_row, 0, { conceal_lines = '' })
+  end
+  attach_virtual_border(
+    anchor_row,
+    fence_row or anchor_row,
+    border_text,
+    is_above,
+    code_block_dto,
+    context_dto
+  )
+end
+
 ---@param box_width integer
 ---@param code_block_dto CodeBlockProps
 ---@param context_dto CodeBlockContextProps
 local function render_top_border(box_width, code_block_dto, context_dto)
-  local border_text =
-    border_line_builder.build_top(box_width, code_block_dto.language)
-  if code_block_dto.opening_fence_row then
-    overlay_border(
-      code_block_dto.opening_fence_row,
-      border_text,
-      code_block_dto,
-      context_dto
-    )
-  else
-    attach_virtual_border(
-      code_block_dto.first_content_row,
-      border_text,
-      true,
-      code_block_dto,
-      context_dto
-    )
-  end
+  render_border(
+    code_block_dto.opening_fence_row,
+    border_line_builder.build_top(
+      box_width,
+      build_title(code_block_dto.language, context_dto.mod_config)
+    ),
+    code_block_dto.first_content_row,
+    true,
+    code_block_dto,
+    context_dto
+  )
 end
 
 ---@param box_width integer
 ---@param code_block_dto CodeBlockProps
 ---@param context_dto CodeBlockContextProps
 local function render_bottom_border(box_width, code_block_dto, context_dto)
-  local border_text = border_line_builder.build_bottom(box_width)
-  if code_block_dto.closing_fence_row then
-    overlay_border(
-      code_block_dto.closing_fence_row,
-      border_text,
-      code_block_dto,
-      context_dto
-    )
-  else
-    attach_virtual_border(
-      code_block_dto.last_content_row,
-      border_text,
-      false,
-      code_block_dto,
-      context_dto
-    )
-  end
+  render_border(
+    code_block_dto.closing_fence_row,
+    border_line_builder.build_bottom(box_width),
+    code_block_dto.last_content_row,
+    false,
+    code_block_dto,
+    context_dto
+  )
 end
 
 ---@param capture_dto CaptureProps

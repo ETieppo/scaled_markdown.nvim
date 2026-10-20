@@ -10,6 +10,7 @@ local QUOTE_MOD = {
   query = QUOTE_QUERY,
   default_config = DEFAULT_QUOTE_CONFIG,
   render = quote_render.render,
+  decorate_line_prefix = quote_render.decorate_line_prefix,
 }
 
 return QUOTE_MOD

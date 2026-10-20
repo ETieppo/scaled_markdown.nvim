@@ -3,6 +3,8 @@ local config_store = require 'scaled_markdown.core.config.config_store'
 local extmark_writer = require 'scaled_markdown.core.render.extmark_writer'
 local image_placement_registry =
   require 'scaled_markdown.core.render.image_placement_registry'
+local line_prefix_decorator =
+  require 'scaled_markdown.core.render.line_prefix_decorator'
 local mod_registry = require 'scaled_markdown.core.registry.mod_registry'
 local positioned_image_painter =
   require 'scaled_markdown.core.render.positioned_image_painter'
@@ -103,6 +105,16 @@ function render_pipeline.render(buf)
     window_geometry.text_offset(win)
   )
   local base_context_dto = render_context_builder.build(buf, win, writer)
+  base_context_dto.decorate_line_prefix = line_prefix_decorator.new(
+    mod_registry.list(),
+    base_context_dto.line_at,
+    function(mod_config)
+      return render_context_builder.with_mod_config(
+        base_context_dto,
+        mod_config
+      )
+    end
+  )
   for _, registered_mod in ipairs(mod_registry.list()) do
     render_mod(
       registered_mod,

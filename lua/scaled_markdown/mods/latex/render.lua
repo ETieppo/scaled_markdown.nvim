@@ -127,6 +127,33 @@ local function build_blank_lines(line_count)
   return blank_lines
 end
 
+---@param reference_slice LatexRowSliceProps
+---@param left_width integer
+---@param text string
+---@param context_dto LatexContextProps
+---@return [string, string][]
+local function build_overflow_chunks(
+  reference_slice,
+  left_width,
+  text,
+  context_dto
+)
+  local prefix_width = utf8_text.display_width(
+    context_dto.line_at(reference_slice.row):sub(1, reference_slice.start_col)
+  )
+  return vim.list_extend(
+    context_dto.decorate_line_prefix(
+      reference_slice.row,
+      reference_slice.start_col
+    ),
+    build_chunks(
+      math.max(0, left_width - prefix_width),
+      text,
+      context_dto.mod_config
+    )
+  )
+end
+
 ---@param row integer
 ---@param virtual_lines [string, string][][]
 ---@param is_above boolean
@@ -195,9 +222,16 @@ local function render_display_box(latex_block_dto, context_dto)
         writer
       )
     else
-      local overflow_lines = slice_index < 1 and lines_above or lines_below
-      overflow_lines[#overflow_lines + 1] =
-        build_chunks(left_width, trimmed_line, context_dto.mod_config)
+      local is_above = slice_index < 1
+      local reference_slice = is_above and row_slices[1]
+        or row_slices[#row_slices]
+      local overflow_lines = is_above and lines_above or lines_below
+      overflow_lines[#overflow_lines + 1] = build_overflow_chunks(
+        reference_slice,
+        left_width,
+        trimmed_line,
+        context_dto
+      )
     end
   end
   write_virtual_lines(first_row, lines_above, true, writer)
