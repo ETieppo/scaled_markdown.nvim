@@ -201,7 +201,7 @@ mods = {
 }
 ```
 
-`quote.callouts` maps each `[!TYPE]` marker (case-insensitive) to its `icon`, `title` and `color`, where `color` is the highlight group used for the title and the bar. GitHub callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) and Obsidian callouts (`ABSTRACT`, `SUMMARY`, `TLDR`, `INFO`, `TODO`, `HINT`, `SUCCESS`, `CHECK`, `DONE`, `QUESTION`, `HELP`, `FAQ`, `ATTENTION`, `FAILURE`, `FAIL`, `MISSING`, `DANGER`, `ERROR`, `BUG`, `EXAMPLE`, `QUOTE`, `CITE`) come built in. Override any field, or add new types with upper-case letter-only keys such as `STAR`.
+`quote.callouts` maps each `[!TYPE]` marker (case-insensitive) to its `icon`, `title` and `color`, where `color` is the highlight group used for the title and the bar. GitHub callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARN`, `WARNING`, `CAUTION`) and Obsidian callouts (`ABSTRACT`, `SUMMARY`, `TLDR`, `INFO`, `TODO`, `HINT`, `SUCCESS`, `CHECK`, `DONE`, `QUESTION`, `HELP`, `FAQ`, `ATTENTION`, `FAILURE`, `FAIL`, `MISSING`, `DANGER`, `ERROR`, `BUG`, `EXAMPLE`, `QUOTE`, `CITE`) come built in. Override any field, or add new types with upper-case letter-only keys such as `STAR`.
 
 `code_block` shows the language's icon before its name in the top border. `language_icons` maps a language (case-insensitive, aliases like `py` or `sh` included) to its icon and is merged with the built-in Nerd Font table, so you only list what you want to change. Languages without an entry use `default_language_icon`. Icons need a Nerd Font.
 

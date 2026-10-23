@@ -3,6 +3,7 @@
 ---| 'TIP'
 ---| 'IMPORTANT'
 ---| 'WARNING'
+---| 'WARN'
 ---| 'CAUTION'
 ---| 'ABSTRACT'
 ---| 'SUMMARY'
@@ -32,6 +33,7 @@
 ---@field TIP CalloutTypeEnum
 ---@field IMPORTANT CalloutTypeEnum
 ---@field WARNING CalloutTypeEnum
+---@field WARN CalloutTypeEnum
 ---@field CAUTION CalloutTypeEnum
 ---@field ABSTRACT CalloutTypeEnum
 ---@field SUMMARY CalloutTypeEnum
@@ -62,6 +64,7 @@ local CALLOUT_TYPE_ENUM = {
   TIP = 'TIP',
   IMPORTANT = 'IMPORTANT',
   WARNING = 'WARNING',
+  WARN = 'WARN',
   CAUTION = 'CAUTION',
   ABSTRACT = 'ABSTRACT',
   SUMMARY = 'SUMMARY',

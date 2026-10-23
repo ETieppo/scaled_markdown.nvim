@@ -24,6 +24,11 @@ local DEFAULT_QUOTE_CONFIG = {
       title = 'Warning',
       color = 'DiagnosticWarn',
     },
+    [CALLOUT_TYPE_ENUM.WARN] = {
+      icon = '󰀪 ',
+      title = 'Warning',
+      color = 'DiagnosticWarn',
+    },
     [CALLOUT_TYPE_ENUM.CAUTION] = {
       icon = '󰳦 ',
       title = 'Caution',
